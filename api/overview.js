@@ -135,7 +135,7 @@ async function fetchAssets(kind, limit) {
     
     return data.map((item, index) => normalizeAsset({
       ...item,
-      logo: logoMap.get(item.id ?? 0) ?? item.logo,
+      logo: logoMap.get(item.id ?? 0) || item.logo,
     }, kind, index));
   }
   
