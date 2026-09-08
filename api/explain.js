@@ -75,13 +75,17 @@ module.exports = async function handler(req, res) {
     return res.status(200).end();
   }
 
-  if (method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   try {
-    const body = await req.json();
-    const { question, assetSymbol } = body;
+    let question, assetSymbol;
+    
+    if (method === 'POST') {
+      const body = await req.json();
+      question = body.question;
+      assetSymbol = body.assetSymbol;
+    } else {
+      question = query.get('q') || 'What is the market doing?';
+      assetSymbol = query.get('symbol');
+    }
     
     if (!question || question.length < 3) {
       res.status(400).json({ error: "Ask a question with at least 3 characters." });
@@ -94,7 +98,7 @@ module.exports = async function handler(req, res) {
       ? overview.assets.find((item) => item.symbol === requestedSymbol)
       : undefined;
 
-    // Deterministic explanation (placeholder for real LLM)
+    // Simple plain-language explanation
     const marketDirection = overview.marketCapChange24h >= 0 ? "growing" : "cooling";
     const marketChange = Math.abs(overview.marketCapChange24h).toFixed(2);
     const assetMovement = asset?.change24h === null
@@ -114,7 +118,7 @@ module.exports = async function handler(req, res) {
       answer,
       question,
       asOf: overview.asOf,
-      source: "CoinMarketCap · Deterministic fallback (LLM integration pending)",
+      source: "CoinMarketCap · Simple plain-language explanations",
     });
   } catch (error) {
     console.error('Explain API error:', error);

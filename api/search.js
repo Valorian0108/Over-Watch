@@ -139,7 +139,7 @@ async function fetchAssets(kind, limit) {
     }, kind, index));
   }
   
-  // RWA with live pricing
+  // RWA - metadata only (CMC doesn't have issuer data for most RWAs)
   const data = await cmcGet("/v5/real-world-assets/map", {
     listing_status: "active",
     limit,
@@ -149,50 +149,19 @@ async function fetchAssets(kind, limit) {
   const rwaIds = rwaAssets.map(item => item.rwa_id).filter((id) => id !== undefined);
   const rwaLogoMap = await fetchRwaLogos(rwaIds);
   
-  const enhancedAssets = await Promise.all(
-    rwaAssets.map(async (rwa, index) => {
-      const cryptoId = await fetchCryptoIdForRwa(rwa.rwa_id ?? 0);
-      
-      if (cryptoId) {
-        try {
-          const quotes = await cmcGet("/v2/cryptocurrency/quotes/latest", {
-            id: cryptoId,
-            convert: "USD",
-          });
-          
-          const cryptoData = quotes[cryptoId]?.[0];
-          if (cryptoData) {
-            return normalizeAsset({
-              ...cryptoData,
-              name: rwa.name || cryptoData.name,
-              symbol: rwa.symbol || cryptoData.symbol,
-              cmc_rank: rwa.rwa_rank ?? cryptoData.cmc_rank,
-              logo: rwaLogoMap.get(rwa.rwa_id ?? 0) ?? cryptoData.logo,
-            }, "rwa", index);
-          }
-        } catch (error) {
-          // Fall back to metadata-only
-        }
-      }
-      
-      // Metadata-only fallback
-      return {
-        id: numberOr(rwa.rwa_id, index + 1),
-        name: rwa.name || rwa.symbol || `RWA${index + 1}`,
-        symbol: rwa.symbol?.toUpperCase() || `RWA${index + 1}`,
-        kind: "rwa",
-        price: null,
-        change24h: null,
-        marketCap: null,
-        volume24h: null,
-        rank: rwa.rwa_rank ?? null,
-        color: colorFor(rwa.symbol || `RWA${index + 1}`),
-        imageUrl: rwaLogoMap.get(rwa.rwa_id ?? 0) ?? null,
-      };
-    }),
-  );
-  
-  return enhancedAssets;
+  return rwaAssets.map((item, index) => ({
+    id: numberOr(item.rwa_id, index + 1),
+    name: item.name || item.symbol || `RWA${index + 1}`,
+    symbol: item.symbol?.toUpperCase() || `RWA${index + 1}`,
+    kind: "rwa",
+    price: null,
+    change24h: null,
+    marketCap: null,
+    volume24h: null,
+    rank: item.rwa_rank ?? null,
+    color: colorFor(item.symbol || `RWA${index + 1}`),
+    imageUrl: rwaLogoMap.get(item.rwa_id ?? 0) ?? null,
+  }));
 }
 
 module.exports = async function handler(req, res) {
