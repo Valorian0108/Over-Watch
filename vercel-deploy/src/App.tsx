@@ -5,7 +5,7 @@ import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import NotFound from './pages/not-found';
 import './index.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/market';
 
 // Simple API client
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -67,7 +67,7 @@ const queryClient = new QueryClient();
 function useGetMarketOverview(params: { limit: number }) {
   return useQuery({
     queryKey: ['market-overview', params],
-    queryFn: () => apiFetch<MarketOverview>(`/market/overview?limit=${params.limit}`),
+    queryFn: () => apiFetch<MarketOverview>(`/overview?limit=${params.limit}`),
   });
 }
 
@@ -78,7 +78,7 @@ function useGetMarketAssets(params: { kind?: string; limit: number }) {
   
   return useQuery({
     queryKey: ['market-assets', params],
-    queryFn: () => apiFetch<MarketAsset[]>(`/market/assets?${queryParams.toString()}`),
+    queryFn: () => apiFetch<MarketAsset[]>(`/assets?${queryParams.toString()}`),
   });
 }
 
@@ -90,7 +90,7 @@ function useSearchMarketAssets(params: { q: string; kind?: string; limit: number
   
   return useQuery({
     queryKey: ['market-search', params],
-    queryFn: () => apiFetch<MarketAsset[]>(`/market/search?${queryParams.toString()}`),
+    queryFn: () => apiFetch<MarketAsset[]>(`/search?${queryParams.toString()}`),
     enabled: params.q.length >= 2,
   });
 }
@@ -98,7 +98,7 @@ function useSearchMarketAssets(params: { q: string; kind?: string; limit: number
 function useGetMarketAsset(symbol: string) {
   return useQuery({
     queryKey: ['market-asset', symbol],
-    queryFn: () => apiFetch<MarketAsset>(`/market/assets/${symbol}`),
+    queryFn: () => apiFetch<MarketAsset>(`/assets/${symbol}`),
     enabled: Boolean(symbol),
   });
 }
@@ -106,7 +106,7 @@ function useGetMarketAsset(symbol: string) {
 function useExplainMarketQuestion() {
   return useMutation({
     mutationFn: (data: { question: string; assetSymbol: string | null }) =>
-      apiFetch<MarketExplanation>('/market/explain', {
+      apiFetch<MarketExplanation>('/explain', {
         method: 'POST',
         body: JSON.stringify(data),
       }),

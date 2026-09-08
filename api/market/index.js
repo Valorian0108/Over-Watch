@@ -287,6 +287,23 @@ module.exports = async function handler(req, res) {
       const overview = await getOverview(limit);
       res.json(overview);
     }
+    else if (cleanPath[0] === 'search') {
+      const queryParam = query.get('q');
+      const kind = query.get('kind') === 'crypto' || query.get('kind') === 'rwa' ? query.get('kind') : undefined;
+      const limit = parseInt(query.get('limit')) || 8;
+      
+      if (!queryParam) {
+        res.status(400).json({ error: "Search query required" });
+        return;
+      }
+      
+      const assets = await fetchAssets(kind, limit);
+      const filtered = assets.filter(asset => 
+        asset.name.toLowerCase().includes(queryParam.toLowerCase()) ||
+        asset.symbol.toLowerCase().includes(queryParam.toLowerCase())
+      );
+      res.json(filtered);
+    }
     else if (cleanPath[0] === 'assets') {
       if (cleanPath[1]) {
         // Single asset
