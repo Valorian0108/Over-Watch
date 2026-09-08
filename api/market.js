@@ -3,6 +3,8 @@ module.exports = async function handler(req, res) {
   const urlObj = new URL(url, `http://${req.headers.host}`);
   const query = urlObj.searchParams;
   
+  console.log('API request:', { method, url, path: url.split('/').filter(Boolean) });
+  
   const CMC_BASE_URL = "https://pro-api.coinmarketcap.com";
   const assetColors = ["coral", "blue", "lime", "violet", "amber", "sky", "rose", "mint"];
 
@@ -270,19 +272,21 @@ module.exports = async function handler(req, res) {
 
   try {
     const path = url.split('/').filter(Boolean);
+    // Remove 'api' prefix if present
+    const cleanPath = path[0] === 'api' ? path.slice(1) : path;
 
-    if (path[0] === 'healthz') {
+    if (cleanPath[0] === 'healthz') {
       res.json({ status: 'ok', timestamp: new Date().toISOString() });
     }
-    else if (path[0] === 'market' && path[1] === 'overview') {
+    else if (cleanPath[0] === 'market' && cleanPath[1] === 'overview') {
       const limit = parseInt(query.get('limit')) || 8;
       const overview = await getOverview(limit);
       res.json(overview);
     }
-    else if (path[0] === 'market' && path[1] === 'assets') {
-      if (path[2]) {
+    else if (cleanPath[0] === 'market' && cleanPath[1] === 'assets') {
+      if (cleanPath[2]) {
         // Single asset
-        const symbol = path[2].toUpperCase();
+        const symbol = cleanPath[2].toUpperCase();
         const [crypto, rwa] = await Promise.allSettled([
           fetchAssets("crypto", 100),
           fetchAssets("rwa", 100),
@@ -305,7 +309,7 @@ module.exports = async function handler(req, res) {
         res.json(assets);
       }
     }
-    else if (path[0] === 'market' && path[1] === 'explain' && method === 'POST') {
+    else if (cleanPath[0] === 'market' && cleanPath[1] === 'explain' && method === 'POST') {
       const body = await req.json();
       const { question, assetSymbol } = body;
       
