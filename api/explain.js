@@ -1,6 +1,4 @@
 const CMC_BASE_URL = "https://pro-api.coinmarketcap.com";
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
 function numberOr(value, fallback = 0) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -34,42 +32,6 @@ async function cmcGet(path, queryParams) {
     throw new Error(payload.status?.error_message ?? "CoinMarketCap returned no data.");
   }
   return payload.data;
-}
-
-async function callGemini(question, marketContext) {
-  if (!GEMINI_API_KEY) {
-    throw new Error("Gemini API key is not configured.");
-  }
-
-  const prompt = `Answer this market question in 1-2 sentences using this data: ${marketContext}. Question: ${question}`;
-  
-  const response = await fetch(`${GEMINI_BASE_URL}?key=${GEMINI_API_KEY}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [{
-        parts: [{
-          text: prompt
-        }]
-      }]
-    })
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${error}`);
-  }
-
-  const data = await response.json();
-  const answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  
-  if (!answer) {
-    throw new Error("No response from Gemini");
-  }
-  
-  return answer.trim();
 }
 
 async function getOverview(limit) {
@@ -151,48 +113,28 @@ module.exports = async function handler(req, res) {
       ? overview.assets.find((item) => item.symbol === requestedSymbol)
       : undefined;
 
-    // Build market context for Gemini
+    // Simple plain-language explanation
     const marketDirection = overview.marketCapChange24h >= 0 ? "growing" : "cooling";
     const marketChange = Math.abs(overview.marketCapChange24h).toFixed(2);
-    const assetContext = asset
-      ? `${asset.name} (${asset.symbol}) is ${asset.change24h >= 0 ? "up" : "down"} ${Math.abs(asset.change24h).toFixed(2)}%`
-      : "";
-    
-    const marketContext = `Market: ${marketDirection} ${marketChange}% today. ${assetContext}`;
+    const assetMovement = asset?.change24h === null
+      ? `${asset.name} has a live identity record, but live pricing data is not currently available for this asset`
+      : asset
+        ? `${asset.name} is ${asset.change24h >= 0 ? "up" : "down"} ${Math.abs(asset.change24h).toFixed(2)}% over the last 24 hours`
+        : "";
+    const assetPrice = asset?.price === null || asset?.price === undefined
+      ? "its current quoted price is not reported by this source"
+      : `its current price is $${asset.price.toLocaleString("en-US", { maximumFractionDigits: asset.price < 1 ? 6 : 2 })}`;
 
-    try {
-      const answer = await callGemini(question, marketContext);
-      
-      res.json({
-        answer,
-        question,
-        asOf: overview.asOf,
-        source: "Gemini AI · Live market data",
-      });
-    } catch (geminiError) {
-      console.error('Gemini error, falling back to simple response:', geminiError);
-      
-      // Fallback to simple response if Gemini fails
-      const assetMovement = asset?.change24h === null
-        ? `${asset.name} has a live identity record, but live pricing data is not currently available for this asset`
-        : asset
-          ? `${asset.name} is ${asset.change24h >= 0 ? "up" : "down"} ${Math.abs(asset.change24h).toFixed(2)}% over the last 24 hours`
-          : "";
-      const assetPrice = asset?.price === null || asset?.price === undefined
-        ? "its current quoted price is not reported by this source"
-        : `its current price is $${asset.price.toLocaleString("en-US", { maximumFractionDigits: asset.price < 1 ? 6 : 2 })}`;
+    const answer = asset
+      ? `${assetMovement}; ${assetPrice}. In context, the wider market is ${marketDirection} by ${marketChange}% today.`
+      : `The wider market is ${marketDirection} by ${marketChange}% over the last 24 hours, with ${overview.btcDominance.toFixed(1)}% of the total market represented by Bitcoin.`;
 
-      const answer = asset
-        ? `${assetMovement}; ${assetPrice}. In context, the wider market is ${marketDirection} by ${marketChange}% today.`
-        : `The wider market is ${marketDirection} by ${marketChange}% over the last 24 hours, with ${overview.btcDominance.toFixed(1)}% of the total market represented by Bitcoin.`;
-
-      res.json({
-        answer,
-        question,
-        asOf: overview.asOf,
-        source: "CoinMarketCap · Simple plain-language explanations (AI unavailable)",
-      });
-    }
+    res.json({
+      answer,
+      question,
+      asOf: overview.asOf,
+      source: "CoinMarketCap · Simple plain-language explanations",
+    });
   } catch (error) {
     console.error('Explain API error:', error);
     res.status(502).json({ error: error.message || 'Explanation unavailable.' });
