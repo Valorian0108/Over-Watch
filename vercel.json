@@ -3,11 +3,6 @@
   "outputDirectory": "vercel-deploy/dist",
   "installCommand": "cd vercel-deploy && npm install",
   "framework": null,
-  "functions": {
-    "api/**": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "rewrites": [
     {
       "source": "/(.*)",
