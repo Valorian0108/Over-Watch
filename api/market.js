@@ -1,6 +1,7 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   const { method, url } = req;
-  const { query } = new URL(url);
+  const urlObj = new URL(url, `http://${req.headers.host}`);
+  const query = urlObj.searchParams;
   
   const CMC_BASE_URL = "https://pro-api.coinmarketcap.com";
   const assetColors = ["coral", "blue", "lime", "violet", "amber", "sky", "rose", "mint"];
