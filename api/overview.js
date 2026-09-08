@@ -81,6 +81,47 @@ async function fetchCryptoLogos(ids) {
   return logoMap;
 }
 
+async function fetchRwaLogos(rwaIds) {
+  const logoMap = new Map();
+  
+  if (rwaIds.length === 0) return logoMap;
+  
+  try {
+    const info = await cmcGet("/v5/real-world-assets/info", {
+      rwa_id: rwaIds.join(","),
+    });
+    
+    for (const asset of info.data ?? []) {
+      if (asset.rwa_id && asset.about?.logo) {
+        logoMap.set(asset.rwa_id, asset.about.logo);
+      }
+    }
+  } catch (error) {
+    // Continue without logos
+  }
+  
+  return logoMap;
+}
+
+async function fetchCryptoIdForRwa(rwaId) {
+  try {
+    const issuers = await cmcGet("/v5/real-world-assets/issuers", {
+      rwa_id: rwaId,
+    });
+    
+    for (const issuer of issuers.issuers ?? []) {
+      for (const token of issuer.tokens ?? []) {
+        if (token.crypto_id) {
+          return token.crypto_id;
+        }
+      }
+    }
+    return null;
+  } catch (error) {
+    return null;
+  }
+}
+
 async function fetchAssets(kind, limit) {
   if (kind === "crypto") {
     const data = await cmcGet("/v1/cryptocurrency/listings/latest", {
@@ -98,25 +139,60 @@ async function fetchAssets(kind, limit) {
     }, kind, index));
   }
   
-  // RWA - simplified for now
+  // RWA with live pricing
   const data = await cmcGet("/v5/real-world-assets/map", {
     listing_status: "active",
     limit,
   });
   
-  return data.rwa_assets?.map((item, index) => ({
-    id: numberOr(item.rwa_id, index + 1),
-    name: item.name || item.symbol || `RWA${index + 1}`,
-    symbol: item.symbol?.toUpperCase() || `RWA${index + 1}`,
-    kind: "rwa",
-    price: null,
-    change24h: null,
-    marketCap: null,
-    volume24h: null,
-    rank: item.rwa_rank ?? null,
-    color: colorFor(item.symbol || `RWA${index + 1}`),
-    imageUrl: null,
-  })) || [];
+  const rwaAssets = data.rwa_assets ?? [];
+  const rwaIds = rwaAssets.map(item => item.rwa_id).filter((id) => id !== undefined);
+  const rwaLogoMap = await fetchRwaLogos(rwaIds);
+  
+  const enhancedAssets = await Promise.all(
+    rwaAssets.map(async (rwa, index) => {
+      const cryptoId = await fetchCryptoIdForRwa(rwa.rwa_id ?? 0);
+      
+      if (cryptoId) {
+        try {
+          const quotes = await cmcGet("/v2/cryptocurrency/quotes/latest", {
+            id: cryptoId,
+            convert: "USD",
+          });
+          
+          const cryptoData = quotes[cryptoId]?.[0];
+          if (cryptoData) {
+            return normalizeAsset({
+              ...cryptoData,
+              name: rwa.name || cryptoData.name,
+              symbol: rwa.symbol || cryptoData.symbol,
+              cmc_rank: rwa.rwa_rank ?? cryptoData.cmc_rank,
+              logo: rwaLogoMap.get(rwa.rwa_id ?? 0) ?? cryptoData.logo,
+            }, "rwa", index);
+          }
+        } catch (error) {
+          // Fall back to metadata-only
+        }
+      }
+      
+      // Metadata-only fallback
+      return {
+        id: numberOr(rwa.rwa_id, index + 1),
+        name: rwa.name || rwa.symbol || `RWA${index + 1}`,
+        symbol: rwa.symbol?.toUpperCase() || `RWA${index + 1}`,
+        kind: "rwa",
+        price: null,
+        change24h: null,
+        marketCap: null,
+        volume24h: null,
+        rank: rwa.rwa_rank ?? null,
+        color: colorFor(rwa.symbol || `RWA${index + 1}`),
+        imageUrl: rwaLogoMap.get(rwa.rwa_id ?? 0) ?? null,
+      };
+    }),
+  );
+  
+  return enhancedAssets;
 }
 
 async function getOverview(limit) {
@@ -159,9 +235,7 @@ async function getOverview(limit) {
         change24h: 0,
       },
     ],
-    source: rwaAssets.status === "fulfilled" 
-      ? "CoinMarketCap · /v1/global-metrics/quotes/latest + /v1/cryptocurrency/listings/latest + /v5/real-world-assets/map"
-      : "CoinMarketCap · /v1/global-metrics/quotes/latest + /v1/cryptocurrency/listings/latest",
+    source: "CoinMarketCap · /v1/global-metrics/quotes/latest + /v1/cryptocurrency/listings/latest + /v5/real-world-assets/map + /v5/real-world-assets/issuers + /v2/cryptocurrency/quotes/latest + /v5/real-world-assets/info",
   };
 }
 
