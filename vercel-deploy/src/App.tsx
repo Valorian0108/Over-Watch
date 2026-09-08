@@ -90,7 +90,7 @@ function useSearchMarketAssets(params: { q: string; kind?: string; limit: number
   
   return useQuery({
     queryKey: ['market-search', params],
-    queryFn: () => apiFetch<MarketAsset[]>(`/search?${queryParams.toString()}`),
+    queryFn: () => apiFetch<MarketAsset[]>(`/api/search?${queryParams.toString()}`),
     enabled: params.q.length >= 2,
   });
 }
@@ -106,7 +106,7 @@ function useGetMarketAsset(symbol: string) {
 function useExplainMarketQuestion() {
   return useMutation({
     mutationFn: (data: { question: string; assetSymbol: string | null }) =>
-      apiFetch<MarketExplanation>('/explain', {
+      apiFetch<MarketExplanation>('/api/explain', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
@@ -301,11 +301,11 @@ function Observatory() {
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const autoRefreshInterval = useRef<NodeJS.Timeout | null>(null);
   
-  const overviewQuery = useGetMarketOverview({ limit: 8 });
-  const assetsQuery = useGetMarketAssets(focus === 'all' ? { limit: 8 } : { kind: focus, limit: 8 });
+  const overviewQuery = useGetMarketOverview({ limit: 20 });
+  const assetsQuery = useGetMarketAssets(focus === 'all' ? { limit: 20 } : { kind: focus, limit: 20 });
   const overview = overviewQuery.data as MarketOverview | undefined;
   const searchQuery = useSearchMarketAssets(
-    { q: searchTerm || 'idle', kind: focus === 'all' ? undefined : focus, limit: 12 },
+    { q: searchTerm || 'idle', kind: focus === 'all' ? undefined : focus, limit: 50 },
   );
   const assets = searchTerm.length >= 2
     ? searchQuery.data ?? []
