@@ -101,10 +101,17 @@ async function fetchRwaLogos(rwaIds) {
     for (const asset of info.data ?? []) {
       if (asset.rwa_id && asset.about?.logo) {
         logoMap.set(asset.rwa_id, asset.about.logo);
+      } else {
+        // Fallback to placeholder
+        logoMap.set(asset.rwa_id, null);
       }
     }
   } catch (error) {
-    // Continue without logos
+    console.error('Error fetching RWA logos:', error);
+    // Fallback for all RWA IDs
+    for (const id of rwaIds) {
+      logoMap.set(id, null);
+    }
   }
   
   return logoMap;
