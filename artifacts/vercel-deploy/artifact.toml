@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Tidepool"
+description = "A playful live market observatory that turns CoinMarketCap crypto and real-world asset data into a visual, approachable experience with plain-language explanations."
+version = "1.0.0"
+id = "artifacts/living-market"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25074
+
+[services.development]
+run = "pnpm --filter @workspace/living-market run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/living-market", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/living-market/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25074"
+BASE_PATH = "/"

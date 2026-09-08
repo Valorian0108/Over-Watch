@@ -14,7 +14,7 @@ const router: IRouter = Router();
 const CMC_BASE_URL = "https://pro-api.coinmarketcap.com";
 const CMC_SOURCE =
   "CoinMarketCap · /v1/global-metrics/quotes/latest + /v1/cryptocurrency/listings/latest";
-const RWA_SOURCE = `${CMC_SOURCE} + /v5/real-world-assets/map`;
+const RWA_SOURCE = `${CMC_SOURCE} + /v5/real-world-assets/map + /v5/real-world-assets/issuers + /v2/cryptocurrency/quotes/latest`;
 const assetColors = [
   "coral",
   "blue",
@@ -78,6 +78,40 @@ type CmcRwaMap = {
     rwa_id?: number;
     asset_type?: string;
     rwa_rank?: number;
+  }>;
+};
+
+type CmcRwaIssuers = {
+  issuers?: Array<{
+    rwa_id?: number;
+    issuer_id?: number;
+    name?: string;
+    tokens?: Array<{
+      crypto_id?: number;
+      symbol?: string;
+      name?: string;
+    }>;
+  }>;
+};
+
+type CmcCryptoInfo = {
+  [key: string]: Array<{
+    id?: number;
+    name?: string;
+    symbol?: string;
+    logo?: string;
+    slug?: string;
+  }>;
+};
+
+type CmcRwaInfo = {
+  data?: Array<{
+    rwa_id?: number;
+    name?: string;
+    symbol?: string;
+    about?: {
+      logo?: string;
+    };
   }>;
 };
 
@@ -161,6 +195,7 @@ function normalizeAsset(
 function normalizeRwaAsset(
   item: NonNullable<CmcRwaMap["rwa_assets"]>[number],
   index: number,
+  logoUrl: string | null = null,
 ) {
   const symbol = item.symbol?.toUpperCase() || `RWA${index + 1}`;
   return {
@@ -174,7 +209,7 @@ function normalizeRwaAsset(
     volume24h: null,
     rank: item.rwa_rank ?? null,
     color: colorFor(symbol),
-    imageUrl: null,
+    imageUrl: logoUrl,
   };
 }
 
@@ -193,6 +228,121 @@ type ExplanationAsset = {
   rank: number | null;
 };
 
+async function fetchCryptoIdForRwa(rwaId: number): Promise<number | null> {
+  try {
+    const issuers = await cmcGet<CmcRwaIssuers>("/v5/real-world-assets/issuers", {
+      rwa_id: rwaId,
+    });
+    
+    for (const issuer of issuers.issuers ?? []) {
+      for (const token of issuer.tokens ?? []) {
+        if (token.crypto_id) {
+          return token.crypto_id;
+        }
+      }
+    }
+    return null;
+  } catch (error) {
+    // If issuer lookup fails, return null and continue with metadata-only RWA
+    return null;
+  }
+}
+
+async function fetchCryptoLogos(ids: number[]): Promise<Map<number, string>> {
+  const logoMap = new Map<number, string>();
+  
+  if (ids.length === 0) return logoMap;
+  
+  try {
+    // Batch request for crypto info to get logos
+    const info = await cmcGet<CmcCryptoInfo>("/v2/cryptocurrency/info", {
+      id: ids.join(","),
+    });
+    
+    for (const [idStr, assets] of Object.entries(info)) {
+      const id = parseInt(idStr, 10);
+      if (assets && assets[0]?.logo) {
+        logoMap.set(id, assets[0].logo);
+      }
+    }
+  } catch (error) {
+    // If logo fetch fails, continue without logos
+  }
+  
+  return logoMap;
+}
+
+async function fetchRwaLogos(rwaIds: number[]): Promise<Map<number, string>> {
+  const logoMap = new Map<number, string>();
+  
+  if (rwaIds.length === 0) return logoMap;
+  
+  try {
+    // Batch request for RWA info to get logos
+    const info = await cmcGet<CmcRwaInfo>("/v5/real-world-assets/info", {
+      rwa_id: rwaIds.join(","),
+    });
+    
+    for (const asset of info.data ?? []) {
+      if (asset.rwa_id && asset.about?.logo) {
+        logoMap.set(asset.rwa_id, asset.about.logo);
+      }
+    }
+  } catch (error) {
+    // If logo fetch fails, continue without logos
+  }
+  
+  return logoMap;
+}
+
+async function fetchRwaWithLivePricing(
+  rwaAssets: NonNullable<CmcRwaMap["rwa_assets"]>,
+): Promise<NormalizedAsset[]> {
+  // Fetch RWA logos in batch
+  const rwaIds = rwaAssets.map(item => item.rwa_id).filter((id): id is number => id !== undefined);
+  const rwaLogoMap = await fetchRwaLogos(rwaIds);
+  
+  const enhancedAssets = await Promise.all(
+    rwaAssets.map(async (rwa, index) => {
+      const cryptoId = await fetchCryptoIdForRwa(rwa.rwa_id ?? 0);
+      
+      if (cryptoId) {
+        try {
+          const quotes = await cmcGet<Record<string, CmcAsset[]>>(
+            "/v2/cryptocurrency/quotes/latest",
+            { id: cryptoId, convert: "USD" },
+          );
+          
+          const cryptoData = quotes[cryptoId]?.[0];
+          if (cryptoData) {
+            return normalizeAsset(
+              {
+                ...cryptoData,
+                name: rwa.name || cryptoData.name,
+                symbol: rwa.symbol || cryptoData.symbol,
+                cmc_rank: rwa.rwa_rank ?? cryptoData.cmc_rank,
+                logo: rwaLogoMap.get(rwa.rwa_id ?? 0) ?? cryptoData.logo,
+              },
+              "rwa",
+              index,
+            );
+          }
+        } catch (error) {
+          // If quotes fail, fall back to metadata-only
+        }
+      }
+      
+      // Fallback to metadata-only RWA asset with logo if available
+      return {
+        ...normalizeRwaAsset(rwa, index),
+        imageUrl: rwaLogoMap.get(rwa.rwa_id ?? 0) ?? null,
+      };
+    }),
+  );
+  
+  return enhancedAssets;
+}
+
 async function fetchAssets(
   kind: "crypto" | "rwa",
   limit: number,
@@ -202,13 +352,21 @@ async function fetchAssets(
       "/v1/cryptocurrency/listings/latest",
       { start: 1, limit, convert: "USD" },
     );
-    return data.map((item, index) => normalizeAsset(item, kind, index));
+    
+    // Fetch logos for all crypto assets
+    const cryptoIds = data.map(item => item.id).filter((id): id is number => id !== undefined);
+    const logoMap = await fetchCryptoLogos(cryptoIds);
+    
+    return data.map((item, index) => normalizeAsset({
+      ...item,
+      logo: logoMap.get(item.id ?? 0) ?? item.logo,
+    }, kind, index));
   }
   const data = await cmcGet<CmcRwaMap>("/v5/real-world-assets/map", {
     listing_status: "active",
     limit,
   });
-  return (data.rwa_assets ?? []).map(normalizeRwaAsset);
+  return await fetchRwaWithLivePricing(data.rwa_assets ?? []);
 }
 
 async function searchAssets(
@@ -242,6 +400,11 @@ async function searchAssets(
         "/v2/cryptocurrency/quotes/latest",
         { symbol: symbols.join(","), convert: "USD" },
       );
+      
+      // Fetch logos for matched crypto assets
+      const cryptoIds = matches.map(item => item.id).filter((id): id is number => id !== undefined);
+      const logoMap = await fetchCryptoLogos(cryptoIds);
+      
       for (const [index, match] of matches.entries()) {
         const symbol = match.symbol?.toUpperCase() ?? `ASSET${index + 1}`;
         const quoted = quotes[symbol]?.[0];
@@ -252,6 +415,7 @@ async function searchAssets(
               name: match.name,
               symbol,
               cmc_rank: match.cmc_rank ?? match.rank,
+              logo: logoMap.get(match.id ?? 0),
             },
             "crypto",
             index,
@@ -284,7 +448,8 @@ async function searchAssets(
         )
         .slice(0, Math.max(0, limit - results.length));
     }
-    results.push(...matches.map(normalizeRwaAsset));
+    const enhancedRwaAssets = await fetchRwaWithLivePricing(matches);
+    results.push(...enhancedRwaAssets);
   }
 
   return results.slice(0, limit);
@@ -354,7 +519,7 @@ function buildDeterministicExplanation(
   const marketChange = Math.abs(overview.marketCapChange24h).toFixed(2);
   const assetMovement =
     asset?.change24h === null
-      ? `${asset.name} has a live identity record, but CMC has not returned a quoted 24h move for this RWA endpoint yet`
+      ? `${asset.name} has a live identity record, but live pricing data is not currently available for this asset`
       : asset
         ? `${asset.name} is ${asset.change24h >= 0 ? "up" : "down"} ${Math.abs(asset.change24h).toFixed(2)}% over the last 24 hours`
         : "";
@@ -396,43 +561,59 @@ async function requestAgentRouterExplanation(
       : null,
   };
 
-  const response = await fetch("https://agentrouter.org/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      model: process.env.AGENT_ROUTER_MODEL || "gpt-5",
-      temperature: 0.2,
-      max_tokens: 180,
-      messages: [
-        {
-          role: "system",
-          content:
-            "Explain live market data in plain, calm language for someone who dislikes dense financial dashboards. Use only the supplied snapshot. Never invent missing values, never give investment advice, and mention when a field is unreported. Keep the answer under 90 words.",
-        },
-        {
-          role: "user",
-          content: `Question: ${question}\nSnapshot JSON: ${JSON.stringify(context)}`,
-        },
-      ],
-    }),
-  });
+  // Try multiple AgentRouter endpoints with better headers
+  const endpoints = [
+    "https://agentrouter.org/v1/chat/completions",
+    "https://api.agentrouter.org/v1/chat/completions",
+  ];
 
-  const contentType = response.headers.get("content-type") || "";
-  if (!response.ok || !contentType.includes("application/json")) {
-    throw new ExternalApiError(
-      `AgentRouter returned ${response.status} without a JSON response.`,
-    );
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "User-Agent": "Tidepool/1.0",
+        },
+        body: JSON.stringify({
+          model: process.env.AGENT_ROUTER_MODEL || "gpt-4o-mini",
+          temperature: 0.2,
+          max_tokens: 180,
+          messages: [
+            {
+              role: "system",
+              content:
+                "Explain live market data in plain, calm language for someone who dislikes dense financial dashboards. Use only the supplied snapshot. Never invent missing values, never give investment advice, and mention when a field is unreported. Keep the answer under 90 words.",
+            },
+            {
+              role: "user",
+              content: `Question: ${question}\nSnapshot JSON: ${JSON.stringify(context)}`,
+            },
+          ],
+        }),
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      if (response.ok && contentType.includes("application/json")) {
+        const payload = (await response.json()) as {
+          choices?: Array<{ message?: { content?: unknown } }>;
+        };
+        const answer = payload.choices?.[0]?.message?.content;
+        if (typeof answer === "string" && answer.trim()) {
+          return answer.trim();
+        }
+      }
+    } catch (error) {
+      // Try next endpoint
+      continue;
+    }
   }
 
-  const payload = (await response.json()) as {
-    choices?: Array<{ message?: { content?: unknown } }>;
-  };
-  const answer = payload.choices?.[0]?.message?.content;
-  return typeof answer === "string" && answer.trim() ? answer.trim() : null;
+  throw new ExternalApiError(
+    "AgentRouter endpoints returned non-JSON responses or were unavailable.",
+  );
 }
 
 router.get("/market/overview", async (req, res) => {

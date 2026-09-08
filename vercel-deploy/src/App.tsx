@@ -1,16 +1,120 @@
 import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useGetMarketAsset, useGetMarketAssets, useGetMarketOverview, useSearchMarketAssets, useExplainMarketQuestion } from '@workspace/api-client-react';
-import type { MarketAsset, MarketOverview, MarketPulse } from '@workspace/api-client-react';
+import { QueryClient, QueryClientProvider, useQuery, useMutation } from '@tanstack/react-query';
 import { ArrowDownRight, ArrowUpRight, CircleHelp, Clock3, Database, Leaf, LoaderCircle, RefreshCw, Search, Sparkles, Waves, X } from 'lucide-react';
-import { ErrorBoundary } from '@/components/error-boundary';
-import { Toaster } from '@/components/ui/toaster';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import NotFound from '@/pages/not-found';
+import { ErrorBoundary } from './components/error-boundary';
+import { Toaster } from './components/ui/toaster';
+import { TooltipProvider } from './components/ui/tooltip';
+import NotFound from './pages/not-found';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import './index.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://your-api-server.com/api';
+
+// Simple API client
+async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+  return response.json();
+}
+
+// Types
+type MarketAsset = {
+  id: number;
+  name: string;
+  symbol: string;
+  kind: 'crypto' | 'rwa';
+  price: number | null;
+  change24h: number | null;
+  marketCap: number | null;
+  volume24h: number | null;
+  rank: number | null;
+  color: string;
+  imageUrl: string | null;
+};
+
+type MarketOverview = {
+  asOf: string;
+  totalMarketCap: number;
+  marketCapChange24h: number;
+  totalVolume24h: number;
+  btcDominance: number;
+  assets: MarketAsset[];
+  pulse: Array<{ label: string; value: number; change24h: number }>;
+  source: string;
+};
+
+type MarketExplanation = {
+  answer: string;
+  question: string;
+  asOf: string;
+  source: string;
+};
+
+type MarketPulse = {
+  label: string;
+  value: number;
+  change24h: number;
+};
+
 const queryClient = new QueryClient();
+
+// Custom hooks
+function useGetMarketOverview(params: { limit: number }) {
+  return useQuery({
+    queryKey: ['market-overview', params],
+    queryFn: () => apiFetch<MarketOverview>(`/market/overview?limit=${params.limit}`),
+  });
+}
+
+function useGetMarketAssets(params: { kind?: string; limit: number }) {
+  const queryParams = new URLSearchParams();
+  if (params.kind) queryParams.set('kind', params.kind);
+  queryParams.set('limit', params.limit.toString());
+  
+  return useQuery({
+    queryKey: ['market-assets', params],
+    queryFn: () => apiFetch<MarketAsset[]>(`/market/assets?${queryParams.toString()}`),
+  });
+}
+
+function useSearchMarketAssets(params: { q: string; kind?: string; limit: number }) {
+  const queryParams = new URLSearchParams();
+  queryParams.set('q', params.q);
+  if (params.kind) queryParams.set('kind', params.kind);
+  queryParams.set('limit', params.limit.toString());
+  
+  return useQuery({
+    queryKey: ['market-search', params],
+    queryFn: () => apiFetch<MarketAsset[]>(`/market/search?${queryParams.toString()}`),
+    enabled: params.q.length >= 2,
+  });
+}
+
+function useGetMarketAsset(symbol: string) {
+  return useQuery({
+    queryKey: ['market-asset', symbol],
+    queryFn: () => apiFetch<MarketAsset>(`/market/assets/${symbol}`),
+    enabled: Boolean(symbol),
+  });
+}
+
+function useExplainMarketQuestion() {
+  return useMutation({
+    mutationFn: (data: { question: string; assetSymbol: string | null }) =>
+      apiFetch<MarketExplanation>('/market/explain', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  });
+}
 
 type Focus = 'all' | 'crypto' | 'rwa';
 
@@ -216,7 +320,7 @@ function Observatory() {
   const selectedAsset = assets.find((asset) => asset.symbol === activeSymbol);
   const assetQuery = useGetMarketAsset(activeSymbol || '__none__', { query: { enabled: Boolean(activeSymbol), queryKey: ['market-asset', activeSymbol] } });
   const explanation = useExplainMarketQuestion();
-  const pulses = overview?.pulse ?? [];
+  const pulses = overview?.pulse ?? [] as MarketPulse[];
   
   const refresh = () => {
     void overviewQuery.refetch();

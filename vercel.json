@@ -1,0 +1,12 @@
+{
+  "buildCommand": "cd vercel-deploy && npm install && npm run build",
+  "outputDirectory": "vercel-deploy/dist",
+  "installCommand": "cd vercel-deploy && npm install",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
