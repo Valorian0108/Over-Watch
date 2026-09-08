@@ -15,6 +15,9 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
   },
+  css: {
+    postcss: './postcss.config.js',
+  },
   server: {
     port: 3000,
     host: '0.0.0.0',
