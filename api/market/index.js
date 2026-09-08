@@ -5,6 +5,7 @@ module.exports = async function handler(req, res) {
   
   console.log('API request:', { method, url, path: url.split('/').filter(Boolean) });
   console.log('API key exists:', !!process.env.COINMARKETCAP_API_KEY);
+  console.log('Environment:', Object.keys(process.env).filter(k => k.includes('CMC') || k.includes('API')));
   
   const CMC_BASE_URL = "https://pro-api.coinmarketcap.com";
   const assetColors = ["coral", "blue", "lime", "violet", "amber", "sky", "rose", "mint"];
@@ -273,23 +274,23 @@ module.exports = async function handler(req, res) {
 
   try {
     const path = url.split('/').filter(Boolean);
-    // Remove 'api' prefix if present
-    const cleanPath = path[0] === 'api' ? path.slice(1) : path;
+    // Remove 'api' and 'market' prefix if present
+    const cleanPath = path.filter(p => p !== 'api' && p !== 'market');
 
     console.log('Clean path:', cleanPath);
 
     if (cleanPath[0] === 'healthz') {
       res.json({ status: 'ok', timestamp: new Date().toISOString(), hasApiKey: !!process.env.COINMARKETCAP_API_KEY });
     }
-    else if (cleanPath[0] === 'market' && cleanPath[1] === 'overview') {
+    else if (cleanPath[0] === 'overview') {
       const limit = parseInt(query.get('limit')) || 8;
       const overview = await getOverview(limit);
       res.json(overview);
     }
-    else if (cleanPath[0] === 'market' && cleanPath[1] === 'assets') {
-      if (cleanPath[2]) {
+    else if (cleanPath[0] === 'assets') {
+      if (cleanPath[1]) {
         // Single asset
-        const symbol = cleanPath[2].toUpperCase();
+        const symbol = cleanPath[1].toUpperCase();
         const [crypto, rwa] = await Promise.allSettled([
           fetchAssets("crypto", 100),
           fetchAssets("rwa", 100),
@@ -312,7 +313,7 @@ module.exports = async function handler(req, res) {
         res.json(assets);
       }
     }
-    else if (cleanPath[0] === 'market' && cleanPath[1] === 'explain' && method === 'POST') {
+    else if (cleanPath[0] === 'explain' && method === 'POST') {
       const body = await req.json();
       const { question, assetSymbol } = body;
       
