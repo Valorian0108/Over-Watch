@@ -5,7 +5,7 @@ import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import NotFound from './pages/not-found';
 import './index.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/market';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Simple API client
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
