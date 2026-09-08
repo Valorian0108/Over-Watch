@@ -134,29 +134,78 @@ async function fetchAssets(kind, limit) {
     }, kind, index));
   }
   
-  // RWA - metadata only (CMC doesn't have issuer data for most RWAs)
-  const data = await cmcGet("/v5/real-world-assets/map", {
-    listing_status: "active",
-    limit,
-  });
+  if (kind === "rwa") {
+    // RWA - metadata only (CMC doesn't have issuer data for most RWAs)
+    const data = await cmcGet("/v5/real-world-assets/map", {
+      listing_status: "active",
+      limit,
+    });
+    
+    const rwaAssets = data.rwa_assets ?? [];
+    const rwaIds = rwaAssets.map(item => item.rwa_id).filter((id) => id !== undefined);
+    const rwaLogoMap = await fetchRwaLogos(rwaIds);
+    
+    return rwaAssets.map((item, index) => ({
+      id: numberOr(item.rwa_id, index + 1),
+      name: item.name || item.symbol || `RWA${index + 1}`,
+      symbol: item.symbol?.toUpperCase() || `RWA${index + 1}`,
+      kind: "rwa",
+      price: null,
+      change24h: null,
+      marketCap: null,
+      volume24h: null,
+      rank: item.rwa_rank ?? null,
+      color: colorFor(item.symbol || `RWA${index + 1}`),
+      imageUrl: rwaLogoMap.get(item.rwa_id ?? 0) ?? null,
+    }));
+  }
   
-  const rwaAssets = data.rwa_assets ?? [];
-  const rwaIds = rwaAssets.map(item => item.rwa_id).filter((id) => id !== undefined);
-  const rwaLogoMap = await fetchRwaLogos(rwaIds);
+  // No kind specified - return both crypto and RWA
+  const [cryptoData, rwaData] = await Promise.allSettled([
+    cmcGet("/v1/cryptocurrency/listings/latest", {
+      start: 1,
+      limit: Math.ceil(limit / 2),
+      convert: "USD",
+    }),
+    cmcGet("/v5/real-world-assets/map", {
+      listing_status: "active",
+      limit: Math.floor(limit / 2),
+    }),
+  ]);
   
-  return rwaAssets.map((item, index) => ({
-    id: numberOr(item.rwa_id, index + 1),
-    name: item.name || item.symbol || `RWA${index + 1}`,
-    symbol: item.symbol?.toUpperCase() || `RWA${index + 1}`,
-    kind: "rwa",
-    price: null,
-    change24h: null,
-    marketCap: null,
-    volume24h: null,
-    rank: item.rwa_rank ?? null,
-    color: colorFor(item.symbol || `RWA${index + 1}`),
-    imageUrl: rwaLogoMap.get(item.rwa_id ?? 0) ?? null,
-  }));
+  let assets = [];
+  
+  if (cryptoData.status === "fulfilled") {
+    const cryptoIds = cryptoData.value.map(item => item.id).filter((id) => id !== undefined);
+    const logoMap = await fetchCryptoLogos(cryptoIds);
+    
+    assets = assets.concat(cryptoData.value.map((item, index) => normalizeAsset({
+      ...item,
+      logo: logoMap.get(item.id ?? 0) || item.logo,
+    }, "crypto", index)));
+  }
+  
+  if (rwaData.status === "fulfilled") {
+    const rwaAssets = rwaData.value.rwa_assets ?? [];
+    const rwaIds = rwaAssets.map(item => item.rwa_id).filter((id) => id !== undefined);
+    const rwaLogoMap = await fetchRwaLogos(rwaIds);
+    
+    assets = assets.concat(rwaAssets.map((item, index) => ({
+      id: numberOr(item.rwa_id, assets.length + index + 1),
+      name: item.name || item.symbol || `RWA${index + 1}`,
+      symbol: item.symbol?.toUpperCase() || `RWA${index + 1}`,
+      kind: "rwa",
+      price: null,
+      change24h: null,
+      marketCap: null,
+      volume24h: null,
+      rank: item.rwa_rank ?? null,
+      color: colorFor(item.symbol || `RWA${index + 1}`),
+      imageUrl: rwaLogoMap.get(item.rwa_id ?? 0) ?? null,
+    })));
+  }
+  
+  return assets;
 }
 
 async function getOverview(limit) {
