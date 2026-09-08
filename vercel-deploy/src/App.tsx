@@ -1,10 +1,6 @@
 import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from '@tanstack/react-query';
 import { ArrowDownRight, ArrowUpRight, CircleHelp, Clock3, Database, Leaf, LoaderCircle, RefreshCw, Search, Sparkles, Waves, X } from 'lucide-react';
-import { ErrorBoundary } from './components/error-boundary';
-import { Toaster } from './components/ui/toaster';
-import { TooltipProvider } from './components/ui/tooltip';
-import NotFound from './pages/not-found';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import './index.css';
 
@@ -164,12 +160,12 @@ function Mark({ small = false }: { small?: boolean }) {
 
 function ErrorNotice({ message, onRetry, compact = false }: { message: string; onRetry: () => void; compact?: boolean }) {
   return (
-    <div className={`flex ${compact ? 'items-center' : 'flex-col items-start'} gap-3 rounded-xl border border-[#d89a92] bg-[#fae5df] p-4 text-[#733d3a]`} role="alert" data-testid="status-market-error">
+    <div className={`flex ${compact ? 'items-center' : 'flex-col items-start'} gap-3 rounded-xl border border-[#d89a92] bg-[#fae5df] p-4 text-[#733d3a]`} role="alert">
       <div className="flex items-start gap-3">
         <CircleHelp className="mt-0.5 shrink-0" size={18} aria-hidden="true" />
         <p className="text-sm leading-5">{message}</p>
       </div>
-      <button type="button" onClick={onRetry} className="rounded-lg bg-[#733d3a] px-3 py-2 text-xs font-bold text-[#fae5df] transition-transform hover:-translate-y-0.5" data-testid="button-retry-market">
+      <button type="button" onClick={onRetry} className="rounded-lg bg-[#733d3a] px-3 py-2 text-xs font-bold text-[#fae5df] transition-transform hover:-translate-y-0.5">
         Try again
       </button>
     </div>
@@ -212,7 +208,7 @@ function AssetGlyph({ asset, large = false }: { asset: MarketAsset; large?: bool
 
 function AssetRow({ asset, selected, onSelect }: { asset: MarketAsset; selected: boolean; onSelect: () => void }) {
   return (
-    <button type="button" onClick={onSelect} className={`asset-card group grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl border px-3 py-3 text-left ${selected ? 'selected border-[#6f7770] bg-[#e2ebd1] shadow-sm' : 'border-transparent hover:border-border hover:bg-muted/55'}`} data-testid={`button-select-asset-${asset.symbol.toLowerCase()}`} aria-pressed={selected}>
+    <button type="button" onClick={onSelect} className={`asset-card group grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl border px-3 py-3 text-left ${selected ? 'selected border-[#6f7770] bg-[#e2ebd1] shadow-sm' : 'border-transparent hover:border-border hover:bg-muted/55'}`} aria-pressed={selected}>
       <div className="asset-glyph">
         <AssetGlyph asset={asset} />
       </div>
@@ -233,7 +229,7 @@ function AssetRow({ asset, selected, onSelect }: { asset: MarketAsset; selected:
 
 function PulseRow({ pulse, index }: { pulse: MarketPulse; index: number }) {
   return (
-    <div className="group flex items-center justify-between border-b border-border/60 py-3 last:border-0" data-testid={`row-pulse-${index}`}>
+    <div className="group flex items-center justify-between border-b border-border/60 py-3 last:border-0">
       <span className="flex items-center gap-2.5 text-sm text-foreground">
         <span className={`h-2 w-2 rounded-full ${index % 2 ? 'bg-[#ef775d]' : 'bg-[#5d9c99]'}`} />
         {pulse.label}
@@ -256,7 +252,7 @@ function AskMarket({ selectedSymbol, explanation, onExplain }: { selectedSymbol:
   };
 
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-[#28283b] p-5 text-[#f4f0e6] shadow-md sm:p-6" data-testid="section-ask-market">
+    <section className="relative overflow-hidden rounded-3xl bg-[#28283b] p-5 text-[#f4f0e6] shadow-md sm:p-6">
       <div className="absolute -right-10 -top-12 h-36 w-36 rounded-full border-[18px] border-[#c9e769]/25" aria-hidden="true" />
       <div className="absolute -bottom-16 -left-8 h-32 w-32 rounded-full bg-[#ef775d]/15" aria-hidden="true" />
       <div className="relative">
@@ -272,20 +268,20 @@ function AskMarket({ selectedSymbol, explanation, onExplain }: { selectedSymbol:
           <label htmlFor="market-question" className="sr-only">Question about the market</label>
           <div className="flex items-center gap-2 rounded-2xl border border-[#6e6e7d] bg-[#36364b] px-3 py-2 focus-within:border-[#c9e769]">
             <Search size={17} className="shrink-0 text-[#aaa7b4]" aria-hidden="true" />
-            <input id="market-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={500} placeholder="Why is the market moving?" className="min-w-0 flex-1 bg-transparent py-2 text-sm text-[#f4f0e6] outline-none placeholder:text-[#aaa7b4]" data-testid="input-market-question" />
-            {question && <button type="button" onClick={() => setQuestion('')} className="rounded p-1 text-[#aaa7b4] hover:text-[#f4f0e6]" aria-label="Clear question" data-testid="button-clear-question"><X size={15} /></button>}
+            <input id="market-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={500} placeholder="Why is the market moving?" className="min-w-0 flex-1 bg-transparent py-2 text-sm text-[#f4f0e6] outline-none placeholder:text-[#aaa7b4]" />
+            {question && <button type="button" onClick={() => setQuestion('')} className="rounded p-1 text-[#aaa7b4] hover:text-[#f4f0e6]" aria-label="Clear question"><X size={15} /></button>}
           </div>
           <div className="mt-3 flex items-center justify-between gap-3">
             <span className="font-mono text-[10px] text-[#aaa7b4]">{selectedSymbol ? `Context: ${selectedSymbol}` : 'Context: market-wide'}</span>
-            <button type="submit" disabled={!canAsk} className="inline-flex items-center gap-2 rounded-xl bg-[#c9e769] px-4 py-2.5 text-xs font-bold text-[#28283b] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45" data-testid="button-explain-market">
+            <button type="submit" disabled={!canAsk} className="inline-flex items-center gap-2 rounded-xl bg-[#c9e769] px-4 py-2.5 text-xs font-bold text-[#28283b] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45">
               {explanation.isPending ? <LoaderCircle size={14} className="animate-spin" /> : <Sparkles size={14} />}
               {explanation.isPending ? 'Reading…' : 'Explain'}
             </button>
           </div>
         </form>
-        {explanation.isError && <p className="mt-4 rounded-xl border border-[#9e605c] bg-[#733d3a]/30 px-3 py-2 text-xs leading-5 text-[#ffd9d0]" role="alert" data-testid="status-explain-error">The explanation could not be loaded. The market data above remains the source of truth.</p>}
+        {explanation.isError && <p className="mt-4 rounded-xl border border-[#9e605c] bg-[#733d3a]/30 px-3 py-2 text-xs leading-5 text-[#ffd9d0]" role="alert">The explanation could not be loaded. The market data above remains the source of truth.</p>}
         {explanation.data && (
-          <div className="mt-5 border-t border-[#555568] pt-4" data-testid="status-explanation-success">
+          <div className="mt-5 border-t border-[#555568] pt-4">
             <p className="font-mono text-[10px] uppercase tracking-[.16em] text-[#c9e769]">A plain-language read</p>
             <p className="mt-2 text-sm leading-6 text-[#f4f0e6]">{explanation.data.answer}</p>
             <p className="mt-3 text-[10px] text-[#aaa7b4]">Based on {formatDate(explanation.data.asOf)} · {explanation.data.source}</p>
@@ -309,7 +305,6 @@ function Observatory() {
   const overview = overviewQuery.data as MarketOverview | undefined;
   const searchQuery = useSearchMarketAssets(
     { q: searchTerm || 'idle', kind: focus === 'all' ? undefined : focus, limit: 12 },
-    { query: { enabled: searchTerm.length >= 2, queryKey: ['market-search', searchTerm, focus] } },
   );
   const assets = searchTerm.length >= 2
     ? searchQuery.data ?? []
@@ -318,7 +313,7 @@ function Observatory() {
       : assetsQuery.data ?? [];
   const activeSymbol = assets.some((asset) => asset.symbol === selectedSymbol) ? selectedSymbol ?? '' : assets[0]?.symbol ?? '';
   const selectedAsset = assets.find((asset) => asset.symbol === activeSymbol);
-  const assetQuery = useGetMarketAsset(activeSymbol || '__none__', { query: { enabled: Boolean(activeSymbol), queryKey: ['market-asset', activeSymbol] } });
+  const assetQuery = useGetMarketAsset(activeSymbol || '__none__');
   const explanation = useExplainMarketQuestion();
   const pulses = overview?.pulse ?? [] as MarketPulse[];
   
@@ -374,7 +369,7 @@ function Observatory() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-2 sm:flex" data-testid="status-market-connection">
+          <div className="hidden items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-2 sm:flex">
             <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#5d9c99] opacity-50" /><span className="relative inline-flex h-2 w-2 rounded-full bg-[#27756f]" /></span>
             <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Snapshot feed</span>
           </div>
@@ -387,7 +382,7 @@ function Observatory() {
             <Clock3 size={14} aria-hidden="true" />
             <span className="hidden sm:inline">Auto</span>
           </button>
-          <button type="button" onClick={refresh} disabled={overviewQuery.isFetching || assetsQuery.isFetching} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-65" data-testid="button-refresh-market">
+          <button type="button" onClick={refresh} disabled={overviewQuery.isFetching || assetsQuery.isFetching} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-65">
             <RefreshCw size={14} className={overviewQuery.isFetching ? 'animate-spin' : ''} aria-hidden="true" />
             <span className="hidden sm:inline">Refresh</span>
           </button>
@@ -429,7 +424,7 @@ function Observatory() {
         </section>
 
         <section className="mt-5 grid gap-5 lg:grid-cols-[1.35fr_.75fr]">
-          <div className="rounded-3xl border border-border/70 bg-card p-4 shadow-sm sm:p-6" data-testid="section-market-roster">
+          <div className="rounded-3xl border border-border/70 bg-card p-4 shadow-sm sm:p-6">
             <div className="flex flex-col justify-between gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-end">
               <div>
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[#27756f]">Follow the current</p>
@@ -438,13 +433,13 @@ function Observatory() {
                <div className="flex flex-wrap items-center justify-end gap-2">
                  <form onSubmit={submitSearch} className="flex min-w-[220px] items-center gap-2 rounded-xl border border-border bg-background px-3 py-1.5" role="search">
                    <Search size={14} className="shrink-0 text-muted-foreground" aria-hidden="true" />
-                   <label htmlFor="asset-search" className="sr-only">Search CoinMarketCap assets</label>
-                   <input id="asset-search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search assets" className="min-w-0 flex-1 bg-transparent py-1 text-xs outline-none placeholder:text-muted-foreground" data-testid="input-asset-search" />
-                   {searchInput && <button type="button" onClick={clearSearch} className="text-muted-foreground hover:text-foreground" aria-label="Clear asset search" data-testid="button-clear-asset-search"><X size={14} /></button>}
+                   <label htmlFor="asset-search" className="sr-only">Search assets</label>
+                   <input id="asset-search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search assets" className="min-w-0 flex-1 bg-transparent py-1 text-xs outline-none placeholder:text-muted-foreground" />
+                   {searchInput && <button type="button" onClick={clearSearch} className="text-muted-foreground hover:text-foreground" aria-label="Clear asset search"><X size={14} /></button>}
                  </form>
                  <div className="flex gap-1 rounded-xl bg-muted p-1" role="tablist" aria-label="Market focus">
                    {focusOptions.map((option) => (
-                     <button type="button" key={option.value} onClick={() => setFocus(option.value)} className={`rounded-lg px-3 py-2 text-[11px] font-bold transition-colors ${focus === option.value ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`} role="tab" aria-selected={focus === option.value} data-testid={`button-focus-${option.value}`}>
+                     <button type="button" key={option.value} onClick={() => setFocus(option.value)} className={`rounded-lg px-3 py-2 text-[11px] font-bold transition-colors ${focus === option.value ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`} role="tab" aria-selected={focus === option.value}>
                        {option.label}
                      </button>
                    ))}
@@ -457,13 +452,13 @@ function Observatory() {
                 {[0, 1, 2, 3].map((item) => <div key={item} className="flex items-center gap-3 rounded-2xl px-3 py-3"><div className="skeleton h-10 w-10 rounded-2xl" /><div className="flex-1"><div className="skeleton h-3 w-24 rounded" /><div className="skeleton mt-2 h-2 w-14 rounded" /></div><div className="skeleton h-3 w-16 rounded" /></div>)}
               </div>
             ) : assets.length === 0 ? (
-              <div className="mt-5 rounded-2xl border border-dashed border-border bg-muted/50 px-5 py-10 text-center" data-testid="empty-market-assets">
+              <div className="mt-5 rounded-2xl border border-dashed border-border bg-muted/50 px-5 py-10 text-center">
                 <Leaf className="mx-auto text-[#5d9c99]" size={24} aria-hidden="true" />
                 <p className="mt-3 font-display text-lg">{searchTerm.length >= 2 ? 'No matching signals.' : 'No signals in this clearing.'}</p>
                 <p className="mx-auto mt-1 max-w-xs text-xs leading-5 text-muted-foreground">{searchTerm.length >= 2 ? 'Try a symbol, project name, or real-world asset name.' : 'The source returned an empty set for this focus. Try another lens, or come back when the feed changes.'}</p>
               </div>
             ) : (
-              <div className="mt-4 grid gap-1 sm:grid-cols-2" data-testid="list-market-assets">
+              <div className="mt-4 grid gap-1 sm:grid-cols-2">
                 {assets.map((asset) => <AssetRow key={`${asset.kind}-${asset.id}`} asset={asset} selected={asset.symbol === activeSymbol} onSelect={() => setSelectedSymbol(asset.symbol)} />)}
               </div>
             )}
@@ -471,7 +466,7 @@ function Observatory() {
           </div>
 
           <div className="flex flex-col gap-5">
-            <section className="rounded-3xl border border-border/70 bg-[#d9e7dc] p-5 shadow-sm sm:p-6" data-testid="section-selected-asset">
+            <section className="rounded-3xl border border-border/70 bg-[#d9e7dc] p-5 shadow-sm sm:p-6">
               <div className="flex items-center justify-between">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[#27756f]">In focus</p>
                 {activeSymbol && <span className="rounded-full bg-[#c1d7c4] px-2.5 py-1 font-mono text-[10px] font-bold text-[#27756f]">{selectedAsset?.kind === 'rwa' ? 'REAL-WORLD' : 'CRYPTO'}</span>}
@@ -482,7 +477,7 @@ function Observatory() {
                     <AssetGlyph asset={assetQuery.data ?? selectedAsset} large />
                     <div><h2 className="font-display text-2xl font-semibold tracking-[-.03em]">{assetQuery.data?.name ?? selectedAsset.name}</h2><p className="font-mono text-[11px] font-bold uppercase tracking-widest text-[#27756f]">{activeSymbol}</p></div>
                   </div>
-                  <div className="mt-6 flex items-end justify-between gap-3"><span className="font-display text-3xl font-semibold tracking-[-.05em]" data-testid={`text-selected-price-${activeSymbol}`}>{formatMoney(assetQuery.data?.price ?? selectedAsset.price)}</span><ChangeBadge value={assetQuery.data?.change24h ?? selectedAsset.change24h} /></div>
+                  <div className="mt-6 flex items-end justify-between gap-3"><span className="font-display text-3xl font-semibold tracking-[-.05em]">{formatMoney(assetQuery.data?.price ?? selectedAsset.price)}</span><ChangeBadge value={assetQuery.data?.change24h ?? selectedAsset.change24h} /></div>
                   <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-[#b7d0bd] pt-4">
                     <div><dt className="font-mono text-[9px] uppercase tracking-widest text-[#53766a]">Market cap</dt><dd className="mt-1 text-sm font-bold">{formatMoney(assetQuery.data?.marketCap ?? selectedAsset.marketCap, true)}</dd></div>
                     <div><dt className="font-mono text-[9px] uppercase tracking-widest text-[#53766a]">24h volume</dt><dd className="mt-1 text-sm font-bold">{formatMoney(assetQuery.data?.volume24h ?? selectedAsset.volume24h, true)}</dd></div>
@@ -499,11 +494,11 @@ function Observatory() {
         </section>
 
         <section className="mt-5 grid gap-5 lg:grid-cols-[.75fr_1.35fr]">
-          <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm sm:p-6" data-testid="section-pulse">
+          <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm sm:p-6">
             <div className="flex items-center justify-between"><div><p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[#27756f]">The pulse</p><h2 className="mt-1 font-display text-2xl font-semibold tracking-[-.03em]">Small signals</h2></div><span className="h-3 w-3 rounded-full bg-[#ef775d] animate-pulse-soft" /></div>
-            {pulses.length ? <div className="mt-4">{pulses.map((pulse, index) => <PulseRow pulse={pulse} index={index} key={`${pulse.label}-${index}`} />)}</div> : <div className="mt-5 rounded-2xl bg-muted/60 p-5 text-sm text-muted-foreground" data-testid="empty-market-pulse">Pulse data was not included in this snapshot.</div>}
+            {pulses.length ? <div className="mt-4">{pulses.map((pulse, index) => <PulseRow pulse={pulse} index={index} key={`${pulse.label}-${index}`} />)}</div> : <div className="mt-5 rounded-2xl bg-muted/60 p-5 text-sm text-muted-foreground">Pulse data was not included in this snapshot.</div>}
           </div>
-          <div className="relative overflow-hidden rounded-3xl bg-[#ef775d] p-6 text-[#28283b] shadow-sm sm:p-8" data-testid="section-method">
+          <div className="relative overflow-hidden rounded-3xl bg-[#ef775d] p-6 text-[#28283b] shadow-sm sm:p-8">
             <div className="absolute -right-12 -top-20 h-56 w-56 rounded-full border-[26px] border-[#f8c1a7]/35" aria-hidden="true" />
             <div className="relative max-w-xl">
               <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[#733d3a]">How to use this place</p>
@@ -521,29 +516,19 @@ function Observatory() {
 
 function Router() {
   return (
-    <RoutedErrorBoundary>
-      <Switch>
-        <Route path="/" component={Observatory} />
-        <Route component={NotFound} />
-      </Switch>
-    </RoutedErrorBoundary>
+    <Switch>
+      <Route path="/" component={Observatory} />
+      <Route component={NotFound} />
+    </Switch>
   );
-}
-
-function RoutedErrorBoundary({ children }: { children: ReactNode }) {
-  const [location] = useLocation();
-  return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
+      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+        <Router />
+      </WouterRouter>
     </QueryClientProvider>
   );
 }
