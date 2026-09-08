@@ -1,0 +1,1 @@
+- [Orval and Zod compatibility](orval-zod-compatibility.md) — generated schema helpers must match the workspace's installed Zod major.

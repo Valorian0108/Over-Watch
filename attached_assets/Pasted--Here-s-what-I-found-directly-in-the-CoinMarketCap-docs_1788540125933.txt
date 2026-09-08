@@ -1,0 +1,65 @@
+**Here’s what I found directly in the CoinMarketCap docs (cross-verified):**
+
+### 1. RWA Quotes / Price Data
+
+From the official Pro API reference:
+
+The Real World Assets family currently lists these 7 endpoints:
+
+- `/v5/real-world-assets/map` — RWA ID Map  
+- `/v5/real-world-assets/info` — Metadata  
+- `/v5/real-world-assets/assets/list` — RWA List  
+- `/v5/real-world-assets/market-pairs/list` — Market Pairs  
+- `/v5/real-world-assets/quotes/latest` — Quotes Latest  
+- `/v5/real-world-assets/issuers/list` — Issuers List  
+- `/v5/real-world-assets/issuers` — Issuer  
+
+**Important detail from CMC’s own SpaceX guide (updated Aug 2026):**
+
+The `/v5/real-world-assets/map` endpoint only gives identity + basic metadata (no price, volume, or 24h change).  
+
+CMC’s recommended working path right now is:
+
+1. Use `/v5/real-world-assets/map` → get `rwa_id`
+2. Use the issuers endpoints → get the underlying `crypto_id`
+3. Call the normal cryptocurrency quotes endpoint with that `crypto_id`:
+   ```
+   /v2/cryptocurrency/quotes/latest?id={crypto_id}
+   ```
+   (or the v3 version)
+
+CMC explicitly says: once you have the `crypto_id`, the token behaves like any other on-chain asset and you get live price, market cap, volume, and % change.
+
+They also list `/v5/real-world-assets/quotes/latest` as existing, but the official worked example still routes through the crypto quotes endpoint for live pricing.
+
+### 2. Crypto Logos
+
+Confirmed in CMC docs:
+
+- Endpoint: `/v2/cryptocurrency/info`
+- Returns a `logo` field (PNG URL)
+- You can also construct the logo URL yourself:
+  ```
+  https://s2.coinmarketcap.com/static/img/coins/64x64/{id}.png
+  ```
+  (or 128x128 / 200x200)
+
+This is the standard, documented way. Listings/quotes endpoints do **not** reliably return the logo.
+
+### 3. RWA Logos
+
+From the SpaceX guide:
+
+`/v5/real-world-assets/info` returns an `about.logo` field for many assets.
+
+### Summary of what is actually documented and usable today
+
+| Need                        | Documented Path                                      | Status in Docs          |
+|----------------------------|-------------------------------------------------------|-------------------------|
+| RWA identity               | `/v5/real-world-assets/map`                          | Confirmed               |
+| RWA metadata + logo        | `/v5/real-world-assets/info`                         | Confirmed               |
+| Live RWA price/volume      | Get `crypto_id` via issuers → use crypto quotes      | Official recommended path |
+| Direct RWA quotes          | `/v5/real-world-assets/quotes/latest`                | Listed in reference     |
+| Crypto logos               | `/v2/cryptocurrency/info` or direct URL construction | Confirmed               |
+
+Would you like me to write the exact call sequence (map → issuers → quotes) based on this documented flow so you can test it directly?

@@ -1,0 +1,324 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: market
+    description: Live CoinMarketCap market data and explanations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /market/overview:
+    get:
+      operationId: getMarketOverview
+      tags: [market]
+      summary: Get the live market overview
+      description: Returns a normalized snapshot of global market context and a small set of crypto and real-world assets.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Live market overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketOverview"
+        "502":
+          description: CoinMarketCap is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /market/assets:
+    get:
+      operationId: getMarketAssets
+      tags: [market]
+      summary: Get focused market assets
+      description: Returns normalized crypto or real-world asset data for the living feed.
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [crypto, rwa]
+            default: crypto
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Market assets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketAsset"
+        "502":
+          description: CoinMarketCap is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /market/search:
+    get:
+      operationId: searchMarketAssets
+      tags: [market]
+      summary: Search live market assets
+      description: Searches CoinMarketCap asset metadata and returns live quoted crypto matches when available.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 80
+        - name: kind
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [crypto, rwa]
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Matching market assets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketAsset"
+        "400":
+          description: Invalid search query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: CoinMarketCap is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /market/assets/{symbol}:
+    get:
+      operationId: getMarketAsset
+      tags: [market]
+      summary: Get one market asset
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 20
+      responses:
+        "200":
+          description: Market asset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketAsset"
+        "404":
+          description: Asset not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: CoinMarketCap is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /market/explain:
+    post:
+      operationId: explainMarketQuestion
+      tags: [market]
+      summary: Explain live market data in plain language
+      description: Uses the current market snapshot as context and returns an approachable explanation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketExplanationInput"
+      responses:
+        "200":
+          description: Plain-language explanation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketExplanation"
+        "400":
+          description: Invalid question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Explanation service is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 3
+        maximum: 12
+        default: 8
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    MarketAsset:
+      type: object
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+        symbol:
+          type: string
+        kind:
+          type: string
+          enum: [crypto, rwa]
+        price:
+          type: ["number", "null"]
+        change24h:
+          type: ["number", "null"]
+        marketCap:
+          type: ["number", "null"]
+        volume24h:
+          type: ["number", "null"]
+        rank:
+          type: ["number", "null"]
+        color:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
+        - symbol
+        - kind
+        - price
+        - change24h
+        - marketCap
+        - volume24h
+        - rank
+        - color
+        - imageUrl
+    MarketPulse:
+      type: object
+      properties:
+        label:
+          type: string
+        value:
+          type: number
+        change24h:
+          type: number
+      required:
+        - label
+        - value
+        - change24h
+    MarketOverview:
+      type: object
+      properties:
+        asOf:
+          type: string
+          format: date-time
+        totalMarketCap:
+          type: number
+        marketCapChange24h:
+          type: number
+        totalVolume24h:
+          type: number
+        btcDominance:
+          type: number
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketAsset"
+        pulse:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketPulse"
+        source:
+          type: string
+      required:
+        - asOf
+        - totalMarketCap
+        - marketCapChange24h
+        - totalVolume24h
+        - btcDominance
+        - assets
+        - pulse
+        - source
+    MarketExplanationInput:
+      type: object
+      properties:
+        question:
+          type: string
+          minLength: 3
+          maxLength: 500
+        assetSymbol:
+          type: ["string", "null"]
+          maxLength: 20
+      required:
+        - question
+    MarketExplanation:
+      type: object
+      properties:
+        answer:
+          type: string
+        question:
+          type: string
+        asOf:
+          type: string
+          format: date-time
+        source:
+          type: string
+      required:
+        - answer
+        - question
+        - asOf
+        - source
+
