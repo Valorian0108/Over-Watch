@@ -2,6 +2,7 @@ import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } 
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from '@tanstack/react-query';
 import { ArrowDownRight, ArrowUpRight, CircleHelp, Clock3, Database, Leaf, LoaderCircle, RefreshCw, Search, Sparkles, Waves, X } from 'lucide-react';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
+import NotFound from './pages/not-found';
 import './index.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
