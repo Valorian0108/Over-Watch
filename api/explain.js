@@ -79,8 +79,24 @@ module.exports = async function handler(req, res) {
     let question, assetSymbol;
     
     if (method === 'POST') {
-      question = req.body?.question;
-      assetSymbol = req.body?.assetSymbol;
+      // Parse body manually if not already parsed
+      if (req.body && typeof req.body === 'object') {
+        question = req.body.question;
+        assetSymbol = req.body.assetSymbol;
+      } else {
+        try {
+          let body = '';
+          req.on('data', chunk => { body += chunk.toString(); });
+          await new Promise(resolve => req.on('end', resolve));
+          const parsed = JSON.parse(body);
+          question = parsed.question;
+          assetSymbol = parsed.assetSymbol;
+        } catch (parseError) {
+          console.error('Body parse error:', parseError);
+          res.status(400).json({ error: "Invalid JSON body" });
+          return;
+        }
+      }
     } else {
       question = query.get('q') || 'What is the market doing?';
       assetSymbol = query.get('symbol');
