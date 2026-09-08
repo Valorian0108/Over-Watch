@@ -4,7 +4,7 @@ import { ArrowDownRight, ArrowUpRight, CircleHelp, Clock3, Database, Leaf, Loade
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import './index.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://your-api-server.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Simple API client
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
