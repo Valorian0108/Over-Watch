@@ -104,29 +104,10 @@ async function fetchRwaLogos(rwaIds) {
       }
     }
   } catch (error) {
-    // Continue without logos
+    console.error('Error fetching RWA logos:', error);
   }
   
   return logoMap;
-}
-
-async function fetchCryptoIdForRwa(rwaId) {
-  try {
-    const issuers = await cmcGet("/v5/real-world-assets/issuers", {
-      rwa_id: rwaId,
-    });
-    
-    for (const issuer of issuers.issuers ?? []) {
-      for (const token of issuer.tokens ?? []) {
-        if (token.crypto_id) {
-          return token.crypto_id;
-        }
-      }
-    }
-    return null;
-  } catch (error) {
-    return null;
-  }
 }
 
 async function fetchAssets(kind, limit) {
