@@ -105,11 +105,20 @@ function useGetMarketAsset(symbol: string) {
 
 function useExplainMarketQuestion() {
   return useMutation({
-    mutationFn: (data: { question: string; assetSymbol: string | null }) =>
-      apiFetch<MarketExplanation>('/api/explain', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async (data: { question: string; assetSymbol: string | null }) => {
+      console.log('Calling explain API with:', data);
+      try {
+        const result = await apiFetch<MarketExplanation>('/api/explain', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        });
+        console.log('Explain API result:', result);
+        return result;
+      } catch (error) {
+        console.error('Explain API error:', error);
+        throw error;
+      }
+    },
   });
 }
 
