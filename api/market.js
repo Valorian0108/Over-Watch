@@ -4,6 +4,7 @@ module.exports = async function handler(req, res) {
   const query = urlObj.searchParams;
   
   console.log('API request:', { method, url, path: url.split('/').filter(Boolean) });
+  console.log('API key exists:', !!process.env.COINMARKETCAP_API_KEY);
   
   const CMC_BASE_URL = "https://pro-api.coinmarketcap.com";
   const assetColors = ["coral", "blue", "lime", "violet", "amber", "sky", "rose", "mint"];
@@ -275,8 +276,10 @@ module.exports = async function handler(req, res) {
     // Remove 'api' prefix if present
     const cleanPath = path[0] === 'api' ? path.slice(1) : path;
 
+    console.log('Clean path:', cleanPath);
+
     if (cleanPath[0] === 'healthz') {
-      res.json({ status: 'ok', timestamp: new Date().toISOString() });
+      res.json({ status: 'ok', timestamp: new Date().toISOString(), hasApiKey: !!process.env.COINMARKETCAP_API_KEY });
     }
     else if (cleanPath[0] === 'market' && cleanPath[1] === 'overview') {
       const limit = parseInt(query.get('limit')) || 8;
