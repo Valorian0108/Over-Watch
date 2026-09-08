@@ -79,9 +79,8 @@ module.exports = async function handler(req, res) {
     let question, assetSymbol;
     
     if (method === 'POST') {
-      const body = await req.json();
-      question = body.question;
-      assetSymbol = body.assetSymbol;
+      question = req.body?.question;
+      assetSymbol = req.body?.assetSymbol;
     } else {
       question = query.get('q') || 'What is the market doing?';
       assetSymbol = query.get('symbol');
