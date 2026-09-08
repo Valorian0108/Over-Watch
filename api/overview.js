@@ -72,10 +72,17 @@ async function fetchCryptoLogos(ids) {
       const id = parseInt(idStr, 10);
       if (assets && assets[0]?.logo) {
         logoMap.set(id, assets[0].logo);
+      } else {
+        // Fallback to CMC static URL pattern
+        logoMap.set(id, `https://s2.coinmarketcap.com/static/img/coins/64x64/${id}.png`);
       }
     }
   } catch (error) {
     console.error('Error fetching crypto logos:', error);
+    // Fallback for all IDs
+    for (const id of ids) {
+      logoMap.set(id, `https://s2.coinmarketcap.com/static/img/coins/64x64/${id}.png`);
+    }
   }
   
   return logoMap;
