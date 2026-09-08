@@ -67,7 +67,7 @@ const queryClient = new QueryClient();
 function useGetMarketOverview(params: { limit: number }) {
   return useQuery({
     queryKey: ['market-overview', params],
-    queryFn: () => apiFetch<MarketOverview>(`/overview?limit=${params.limit}`),
+    queryFn: () => apiFetch<MarketOverview>(`/api/overview?limit=${params.limit}`),
   });
 }
 
@@ -78,7 +78,7 @@ function useGetMarketAssets(params: { kind?: string; limit: number }) {
   
   return useQuery({
     queryKey: ['market-assets', params],
-    queryFn: () => apiFetch<MarketAsset[]>(`/assets?${queryParams.toString()}`),
+    queryFn: () => apiFetch<MarketAsset[]>(`/api/assets?${queryParams.toString()}`),
   });
 }
 
@@ -90,7 +90,7 @@ function useSearchMarketAssets(params: { q: string; kind?: string; limit: number
   
   return useQuery({
     queryKey: ['market-search', params],
-    queryFn: () => apiFetch<MarketAsset[]>(`/api/search?${queryParams.toString()}`),
+    queryFn: () => apiFetch<MarketAsset[]>(`/search?${queryParams.toString()}`),
     enabled: params.q.length >= 2,
   });
 }
@@ -98,7 +98,7 @@ function useSearchMarketAssets(params: { q: string; kind?: string; limit: number
 function useGetMarketAsset(symbol: string) {
   return useQuery({
     queryKey: ['market-asset', symbol],
-    queryFn: () => apiFetch<MarketAsset>(`/assets/${symbol}`),
+    queryFn: () => apiFetch<MarketAsset>(`/api/assets/${symbol}`),
     enabled: Boolean(symbol),
   });
 }
@@ -108,7 +108,7 @@ function useExplainMarketQuestion() {
     mutationFn: async (data: { question: string; assetSymbol: string | null }) => {
       console.log('Calling explain API with:', data);
       try {
-        const result = await apiFetch<MarketExplanation>('/api/explain', {
+        const result = await apiFetch<MarketExplanation>('/explain', {
           method: 'POST',
           body: JSON.stringify(data),
         });
