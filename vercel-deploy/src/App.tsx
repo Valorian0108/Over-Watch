@@ -1,6 +1,6 @@
 import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { ArrowDownRight, ArrowUpRight, CircleHelp, Clock3, Database, Leaf, LoaderCircle, RefreshCw, Search, Waves, X } from 'lucide-react';
+import { QueryClient, QueryClientProvider, useQuery, useMutation } from '@tanstack/react-query';
+import { ArrowDownRight, ArrowUpRight, CircleHelp, Clock3, Database, Leaf, LoaderCircle, RefreshCw, Search, Sparkles, Waves, X } from 'lucide-react';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import NotFound from './pages/not-found';
 import './index.css';
@@ -45,6 +45,13 @@ type MarketOverview = {
   btcDominance: number;
   assets: MarketAsset[];
   pulse: Array<{ label: string; value: number; change24h: number }>;
+  source: string;
+};
+
+type MarketExplanation = {
+  answer: string;
+  question: string;
+  asOf: string;
   source: string;
 };
 
@@ -93,6 +100,25 @@ function useGetMarketAsset(symbol: string) {
     queryKey: ['market-asset', symbol],
     queryFn: () => apiFetch<MarketAsset>(`/assets/${symbol}`),
     enabled: Boolean(symbol),
+  });
+}
+
+function useExplainMarketQuestion() {
+  return useMutation({
+    mutationFn: async (params: { question: string; assetSymbol: string | null }) => {
+      console.log('Calling explain API with:', params);
+      try {
+        const result = await apiFetch<MarketExplanation>('/explain', {
+          method: 'POST',
+          body: JSON.stringify(params),
+        });
+        console.log('Explain API result:', result);
+        return result;
+      } catch (error) {
+        console.error('Explain API error:', error);
+        throw error;
+      }
+    },
   });
 }
 
@@ -226,6 +252,56 @@ function PulseRow({ pulse, index }: { pulse: MarketPulse; index: number }) {
   );
 }
 
+function AskMarket({ selectedSymbol, explanation, onExplain }: { selectedSymbol: string; explanation: ReturnType<typeof useExplainMarketQuestion>; onExplain: (question: string) => void }) {
+  const [question, setQuestion] = useState('');
+  const canAsk = question.trim().length >= 3 && !explanation.isPending;
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (canAsk) onExplain(question.trim());
+  };
+
+  return (
+    <section className="relative overflow-hidden rounded-3xl bg-[#28283b] p-5 text-[#f4f0e6] shadow-md sm:p-6">
+      <div className="absolute -right-10 -top-12 h-36 w-36 rounded-full border-[18px] border-[#c9e769]/25" aria-hidden="true" />
+      <div className="absolute -bottom-16 -left-8 h-32 w-32 rounded-full bg-[#ef775d]/15" aria-hidden="true" />
+      <div className="relative">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[#c9e769]">Ask the market</p>
+            <h2 className="mt-2 font-display text-2xl font-semibold tracking-[-.03em]">Make the signal legible.</h2>
+          </div>
+          <Sparkles size={20} className="text-[#ef775d]" aria-hidden="true" />
+        </div>
+        <p className="mt-2 max-w-sm text-sm leading-5 text-[#cbc9d2]">Ask one clear question. The answer is grounded in this snapshot, not a generic explainer.</p>
+        <form onSubmit={submit} className="mt-5">
+          <label htmlFor="market-question" className="sr-only">Question about the market</label>
+          <div className="flex items-center gap-2 rounded-2xl border border-[#6e6e7d] bg-[#36364b] px-3 py-2 focus-within:border-[#c9e769]">
+            <Search size={17} className="shrink-0 text-[#aaa7b4]" aria-hidden="true" />
+            <input id="market-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={500} placeholder="Why is the market moving?" className="min-w-0 flex-1 bg-transparent py-2 text-sm text-[#f4f0e6] outline-none placeholder:text-[#aaa7b4]" />
+            {question && <button type="button" onClick={() => setQuestion('')} className="rounded p-1 text-[#aaa7b4] hover:text-[#f4f0e6]" aria-label="Clear question"><X size={15} /></button>}
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <span className="font-mono text-[10px] text-[#aaa7b4]">{selectedSymbol ? `Context: ${selectedSymbol}` : 'Context: market-wide'}</span>
+            <button type="submit" disabled={!canAsk} className="inline-flex items-center gap-2 rounded-xl bg-[#c9e769] px-4 py-2.5 text-xs font-bold text-[#28283b] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45">
+              {explanation.isPending ? <LoaderCircle size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {explanation.isPending ? 'Reading…' : 'Explain'}
+            </button>
+          </div>
+        </form>
+        {explanation.isError && <p className="mt-4 rounded-xl border border-[#9e605c] bg-[#733d3a]/30 px-3 py-2 text-xs leading-5 text-[#ffd9d0]" role="alert">The explanation could not be loaded. The market data above remains the source of truth.</p>}
+        {explanation.data && (
+          <div className="mt-5 border-t border-[#555568] pt-4">
+            <p className="font-mono text-[10px] uppercase tracking-[.16em] text-[#c9e769]">A plain-language read</p>
+            <p className="mt-2 text-sm leading-6 text-[#f4f0e6]">{explanation.data.answer}</p>
+            <p className="mt-3 text-[10px] text-[#aaa7b4]">Based on {formatDate(explanation.data.asOf)} · {explanation.data.source}</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function Observatory() {
   const [focus, setFocus] = useState<Focus>('all');
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
@@ -248,6 +324,7 @@ function Observatory() {
   const activeSymbol = assets.some((asset) => asset.symbol === selectedSymbol) ? selectedSymbol ?? '' : assets[0]?.symbol ?? '';
   const selectedAsset = assets.find((asset) => asset.symbol === activeSymbol);
   const assetQuery = useGetMarketAsset(activeSymbol || '__none__');
+  const explanation = useExplainMarketQuestion();
   const pulses = overview?.pulse ?? [] as MarketPulse[];
   
   const refresh = () => {
@@ -276,6 +353,10 @@ function Observatory() {
     { value: 'crypto' as const, label: 'Crypto' },
     { value: 'rwa' as const, label: 'Real-world assets' },
   ], []);
+
+  const explain = (question: string) => {
+    explanation.mutate({ question, assetSymbol: activeSymbol || null });
+  };
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -419,6 +500,7 @@ function Observatory() {
                 <div className="py-10 text-center"><Waves className="mx-auto text-[#5d9c99]" size={24} /><p className="mt-3 font-display text-lg">Nothing selected yet.</p><p className="mt-1 text-xs text-muted-foreground">Choose a signal to see its details here.</p></div>
               )}
             </section>
+            <AskMarket selectedSymbol={activeSymbol} explanation={explanation} onExplain={explain} />
           </div>
         </section>
 
