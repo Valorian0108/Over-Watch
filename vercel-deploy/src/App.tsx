@@ -248,7 +248,6 @@ function Observatory() {
   const activeSymbol = assets.some((asset) => asset.symbol === selectedSymbol) ? selectedSymbol ?? '' : assets[0]?.symbol ?? '';
   const selectedAsset = assets.find((asset) => asset.symbol === activeSymbol);
   const assetQuery = useGetMarketAsset(activeSymbol || '__none__');
-  const explanation = useExplainMarketQuestion();
   const pulses = overview?.pulse ?? [] as MarketPulse[];
   
   const refresh = () => {
