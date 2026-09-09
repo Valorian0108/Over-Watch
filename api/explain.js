@@ -65,6 +65,9 @@ async function getOverview(limit) {
 }
 
 async function callGemini(question, marketContext) {
+  console.log('Gemini API Key check:', GEMINI_API_KEY ? 'Present' : 'Missing');
+  console.log('Environment keys:', Object.keys(process.env).filter(k => k.includes('GEMINI') || k.includes('API')));
+  
   if (!GEMINI_API_KEY) {
     throw new Error("Gemini API key is not configured.");
   }
@@ -155,6 +158,7 @@ module.exports = async function handler(req, res) {
       });
     } catch (geminiError) {
       console.error('Gemini error, falling back to simple response:', geminiError);
+      console.error('Error details:', geminiError.message);
       
       // Fallback to simple response if Gemini fails
       const assetMovement = asset?.change24h === null
