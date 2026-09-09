@@ -252,7 +252,7 @@ function PulseRow({ pulse, index }: { pulse: MarketPulse; index: number }) {
   );
 }
 
-function AskMarket({ selectedSymbol, explanation, onExplain }: { selectedSymbol: string; explanation: ReturnType<typeof useExplainMarketQuestion>; onExplain: (question: string) => void }) {
+function AskMarket({ explanation, onExplain }: { explanation: ReturnType<typeof useExplainMarketQuestion>; onExplain: (question: string) => void }) {
   const [question, setQuestion] = useState('');
   const canAsk = question.trim().length >= 3 && !explanation.isPending;
 
@@ -282,7 +282,7 @@ function AskMarket({ selectedSymbol, explanation, onExplain }: { selectedSymbol:
             {question && <button type="button" onClick={() => setQuestion('')} className="rounded p-1 text-[#aaa7b4] hover:text-[#f4f0e6]" aria-label="Clear question"><X size={15} /></button>}
           </div>
           <div className="mt-3 flex items-center justify-between gap-3">
-            <span className="font-mono text-[10px] text-[#aaa7b4]">{selectedSymbol ? `Context: ${selectedSymbol}` : 'Context: market-wide'}</span>
+            <span className="font-mono text-[10px] text-[#aaa7b4]">Context: market-wide</span>
             <button type="submit" disabled={!canAsk} className="inline-flex items-center gap-2 rounded-xl bg-[#c9e769] px-4 py-2.5 text-xs font-bold text-[#28283b] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45">
               {explanation.isPending ? <LoaderCircle size={14} className="animate-spin" /> : <Sparkles size={14} />}
               {explanation.isPending ? 'Reading…' : 'Explain'}
@@ -355,7 +355,7 @@ function Observatory() {
   ], []);
 
   const explain = (question: string) => {
-    explanation.mutate({ question, assetSymbol: activeSymbol || null });
+    explanation.mutate({ question, assetSymbol: null });
   };
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -500,7 +500,7 @@ function Observatory() {
                 <div className="py-10 text-center"><Waves className="mx-auto text-[#5d9c99]" size={24} /><p className="mt-3 font-display text-lg">Nothing selected yet.</p><p className="mt-1 text-xs text-muted-foreground">Choose a signal to see its details here.</p></div>
               )}
             </section>
-            <AskMarket selectedSymbol={activeSymbol} explanation={explanation} onExplain={explain} />
+            <AskMarket explanation={explanation} onExplain={explain} />
           </div>
         </section>
 
