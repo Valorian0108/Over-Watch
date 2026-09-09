@@ -135,8 +135,8 @@ async function fetchAssets(kind, limit) {
   }
   
   if (kind === "rwa") {
-    // RWA - metadata only (CMC doesn't have issuer data for most RWAs)
-    const data = await cmcGet("/v5/real-world-assets/map", {
+    // RWA - use assets/list endpoint for live pricing data
+    const data = await cmcGet("/v5/real-world-assets/assets/list", {
       listing_status: "active",
       limit,
     });
@@ -145,19 +145,27 @@ async function fetchAssets(kind, limit) {
     const rwaIds = rwaAssets.map(item => item.rwa_id).filter((id) => id !== undefined);
     const rwaLogoMap = await fetchRwaLogos(rwaIds);
     
-    return rwaAssets.map((item, index) => ({
-      id: numberOr(item.rwa_id, index + 1),
-      name: item.name || item.symbol || `RWA${index + 1}`,
-      symbol: item.symbol?.toUpperCase() || `RWA${index + 1}`,
-      kind: "rwa",
-      price: null,
-      change24h: null,
-      marketCap: null,
-      volume24h: null,
-      rank: item.rwa_rank ?? null,
-      color: colorFor(item.symbol || `RWA${index + 1}`),
-      imageUrl: rwaLogoMap.get(item.rwa_id ?? 0) ?? null,
-    }));
+    return rwaAssets.map((item, index) => {
+      // Get the USD quote from the quotes array
+      const usdQuote = item.quotes?.find(q => q.symbol === "USD");
+      const price = usdQuote?.average_tokenized_price ?? null;
+      const marketCap = usdQuote?.tokenized_market_cap ?? null;
+      const volume24h = usdQuote?.tokenized_volume_24h ?? null;
+      
+      return {
+        id: numberOr(item.rwa_id, index + 1),
+        name: item.name || item.symbol || `RWA${index + 1}`,
+        symbol: item.symbol?.toUpperCase() || `RWA${index + 1}`,
+        kind: "rwa",
+        price: price,
+        change24h: null, // RWA quotes don't include 24h change in this endpoint
+        marketCap: marketCap,
+        volume24h: volume24h,
+        rank: item.rwa_rank ?? null,
+        color: colorFor(item.symbol || `RWA${index + 1}`),
+        imageUrl: rwaLogoMap.get(item.rwa_id ?? 0) ?? null,
+      };
+    });
   }
   
   // No kind specified - return both crypto and RWA
@@ -167,7 +175,7 @@ async function fetchAssets(kind, limit) {
       limit: Math.ceil(limit / 2),
       convert: "USD",
     }),
-    cmcGet("/v5/real-world-assets/map", {
+    cmcGet("/v5/real-world-assets/assets/list", {
       listing_status: "active",
       limit: Math.floor(limit / 2),
     }),
@@ -190,19 +198,27 @@ async function fetchAssets(kind, limit) {
     const rwaIds = rwaAssets.map(item => item.rwa_id).filter((id) => id !== undefined);
     const rwaLogoMap = await fetchRwaLogos(rwaIds);
     
-    assets = assets.concat(rwaAssets.map((item, index) => ({
-      id: numberOr(item.rwa_id, assets.length + index + 1),
-      name: item.name || item.symbol || `RWA${index + 1}`,
-      symbol: item.symbol?.toUpperCase() || `RWA${index + 1}`,
-      kind: "rwa",
-      price: null,
-      change24h: null,
-      marketCap: null,
-      volume24h: null,
-      rank: item.rwa_rank ?? null,
-      color: colorFor(item.symbol || `RWA${index + 1}`),
-      imageUrl: rwaLogoMap.get(item.rwa_id ?? 0) ?? null,
-    })));
+    assets = assets.concat(rwaAssets.map((item, index) => {
+      // Get the USD quote from the quotes array
+      const usdQuote = item.quotes?.find(q => q.symbol === "USD");
+      const price = usdQuote?.average_tokenized_price ?? null;
+      const marketCap = usdQuote?.tokenized_market_cap ?? null;
+      const volume24h = usdQuote?.tokenized_volume_24h ?? null;
+      
+      return {
+        id: numberOr(item.rwa_id, assets.length + index + 1),
+        name: item.name || item.symbol || `RWA${index + 1}`,
+        symbol: item.symbol?.toUpperCase() || `RWA${index + 1}`,
+        kind: "rwa",
+        price: price,
+        change24h: null, // RWA quotes don't include 24h change in this endpoint
+        marketCap: marketCap,
+        volume24h: volume24h,
+        rank: item.rwa_rank ?? null,
+        color: colorFor(item.symbol || `RWA${index + 1}`),
+        imageUrl: rwaLogoMap.get(item.rwa_id ?? 0) ?? null,
+      };
+    }));
   }
   
   return assets;
