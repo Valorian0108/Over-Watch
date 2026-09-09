@@ -88,8 +88,11 @@ async function callGroq(question, marketContext) {
           content: prompt
         }
       ],
-      max_tokens: 50,
-      temperature: 0.3
+      temperature: 0.7,
+      max_tokens: 100,
+      top_p: 1,
+      stream: false,
+      stop: null
     })
   });
 
