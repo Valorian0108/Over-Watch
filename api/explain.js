@@ -66,7 +66,9 @@ async function getOverview(limit) {
 
 async function callGroq(question, marketContext) {
   console.log('Groq API Key check:', GROQ_API_KEY ? 'Present' : 'Missing');
+  console.log('Groq API Key length:', GROQ_API_KEY?.length || 0);
   console.log('Environment keys:', Object.keys(process.env).filter(k => k.includes('GROQ') || k.includes('API')));
+  console.log('All env keys:', Object.keys(process.env));
   
   if (!GROQ_API_KEY) {
     throw new Error("Groq API key is not configured.");
