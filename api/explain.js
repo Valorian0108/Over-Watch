@@ -67,8 +67,6 @@ async function getOverview(limit) {
 async function callGroq(question, marketContext) {
   console.log('Groq API Key check:', GROQ_API_KEY ? 'Present' : 'Missing');
   console.log('Groq API Key length:', GROQ_API_KEY?.length || 0);
-  console.log('Environment keys:', Object.keys(process.env).filter(k => k.includes('GROQ') || k.includes('API')));
-  console.log('All env keys:', Object.keys(process.env));
   
   if (!GROQ_API_KEY) {
     throw new Error("Groq API key is not configured.");
@@ -90,17 +88,19 @@ async function callGroq(question, marketContext) {
           content: prompt
         }
       ],
-      max_tokens: 100,
-      temperature: 0.5
+      max_tokens: 50,
+      temperature: 0.3
     })
   });
 
   if (!response.ok) {
     const error = await response.text();
+    console.error('Groq API error details:', error);
     throw new Error(`Groq API error: ${response.status} - ${error}`);
   }
 
   const data = await response.json();
+  console.log('Groq API response:', data);
   const answer = data.choices?.[0]?.message?.content;
   
   if (!answer) {
