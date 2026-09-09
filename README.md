@@ -32,7 +32,7 @@ The application provides live market data from CoinMarketCap through a clean, ac
 ### API Endpoints Utilized
 - `/v1/global-metrics/quotes/latest` - Global market metrics
 - `/v1/cryptocurrency/listings/latest` - Crypto asset data
-- `/v5/real-world-assets/map` - RWA asset metadata
+- `/v5/real-world-assets/assets/list` - RWA live pricing data
 - `/v2/cryptocurrency/info` - Asset details and logo information
 - `/v5/real-world-assets/info` - RWA specific information
 
@@ -72,7 +72,7 @@ The project was developed with emphasis on:
 ### Market Data
 - Real-time global market metrics (market cap, volume, BTC dominance)
 - Live cryptocurrency listings with price and performance data
-- Real World Asset metadata and information
+- Real World Asset live pricing data with market cap and volume
 - Asset search functionality across both crypto and RWA datasets
 - Individual asset detail views with comprehensive information
 
@@ -82,6 +82,7 @@ The project was developed with emphasis on:
 - Clear visual hierarchy and information density
 - Accessible color scheme and typography
 - Smooth data refresh intervals
+- Auto-refresh functionality (60-second intervals)
 
 ### API Integration
 - Robust error handling for API failures
@@ -92,9 +93,9 @@ The project was developed with emphasis on:
 ## Known Limitations
 
 ### RWA Data Coverage
-- Many RWA assets lack live pricing data through CMC endpoints
+- RWA assets with live pricing data available through CMC endpoints
 - RWA logo coverage is inconsistent due to CMC API limitations
-- Current implementation relies on metadata rather than live pricing for most RWA assets
+- RWA 24h change data not available in current CMC endpoint
 
 ### AI Integration
 - AI explanations default to rule-based responses when AI services are unavailable
@@ -124,7 +125,7 @@ The project was developed with emphasis on:
 The application demonstrates comprehensive use of CoinMarketCap API capabilities:
 - Global market metrics endpoint for overall market health
 - Cryptocurrency listings for individual asset data
-- RWA endpoints for real-world asset coverage
+- RWA live pricing endpoints for real-world asset coverage
 - Info endpoints for detailed asset information and logo acquisition
 - Search functionality across multiple asset types
 

@@ -180,31 +180,31 @@ async function fetchAssets(kind, limit) {
       limit: Math.floor(limit / 2),
     }),
   ]);
-  
+
   let assets = [];
-  
+
   if (cryptoData.status === "fulfilled") {
     const cryptoIds = cryptoData.value.map(item => item.id).filter((id) => id !== undefined);
     const logoMap = await fetchCryptoLogos(cryptoIds);
-    
+
     assets = assets.concat(cryptoData.value.map((item, index) => normalizeAsset({
       ...item,
       logo: logoMap.get(item.id ?? 0) || item.logo,
     }, "crypto", index)));
   }
-  
+
   if (rwaData.status === "fulfilled") {
     const rwaAssets = rwaData.value.rwa_assets ?? [];
     const rwaIds = rwaAssets.map(item => item.rwa_id).filter((id) => id !== undefined);
     const rwaLogoMap = await fetchRwaLogos(rwaIds);
-    
+
     assets = assets.concat(rwaAssets.map((item, index) => {
       // Get the USD quote from the quotes array
       const usdQuote = item.quotes?.find(q => q.symbol === "USD");
       const price = usdQuote?.average_tokenized_price ?? null;
       const marketCap = usdQuote?.tokenized_market_cap ?? null;
       const volume24h = usdQuote?.tokenized_volume_24h ?? null;
-      
+
       return {
         id: numberOr(item.rwa_id, assets.length + index + 1),
         name: item.name || item.symbol || `RWA${index + 1}`,
