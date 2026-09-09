@@ -1,6 +1,6 @@
 const CMC_BASE_URL = "https://pro-api.coinmarketcap.com";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent";
+const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
 
 function numberOr(value, fallback = 0) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
