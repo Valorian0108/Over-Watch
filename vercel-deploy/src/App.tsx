@@ -375,7 +375,7 @@ function Observatory() {
         <div className="flex items-center gap-3">
           <Mark />
           <div>
-            <p className="font-display text-xl font-semibold leading-none tracking-[-.04em]">Tidepool</p>
+            <p className="font-display text-xl font-semibold leading-none tracking-[-.04em]">OverWatch</p>
             <p className="mt-1 font-mono text-[9px] font-bold uppercase tracking-[.2em] text-muted-foreground">A softer look at hard signals</p>
           </div>
         </div>
@@ -519,7 +519,7 @@ function Observatory() {
             </div>
           </div>
         </section>
-        <footer className="flex flex-col gap-2 py-8 text-[10px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between"><span>Tidepool is a lens on reported data, not investment advice.</span><span className="font-mono uppercase tracking-widest">One screen · many currents</span></footer>
+        <footer className="flex flex-col gap-2 py-8 text-[10px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between"><span>OverWatch is a lens on reported data, not investment advice.</span><span className="font-mono uppercase tracking-widest">One screen · many currents</span></footer>
       </div>
     </main>
   );
