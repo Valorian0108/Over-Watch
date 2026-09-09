@@ -403,8 +403,8 @@ function Observatory() {
       <div className="mx-auto max-w-[1440px] px-5 pb-10 sm:px-8 lg:px-12">
         <section className="grid gap-8 pb-9 pt-8 lg:grid-cols-[1.05fr_1.4fr] lg:items-end lg:gap-16 lg:pt-14">
           <div className="animate-rise">
-            <div className="mb-5 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-[#27756f]">
-              <span className="h-px w-7 bg-[#27756f]" /> Observatory / 01
+            <div className="mb-5 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-[#27756f]">
+              Observatory / 01
             </div>
             <h1 className="max-w-xl font-display text-[clamp(3.5rem,8vw,7.2rem)] font-semibold leading-[.86] tracking-[-.07em] text-[#28283b]">The market is a <span className="text-[#27756f]">living</span> thing.</h1>
             <p className="mt-6 max-w-md text-[15px] leading-6 text-muted-foreground">A calm, current window into crypto and real-world assets. Start with the shape of the day, then follow the signal that catches your eye.</p>
@@ -493,7 +493,7 @@ function Observatory() {
                     <div><dt className="font-mono text-[9px] uppercase tracking-widest text-[#53766a]">Market cap</dt><dd className="mt-1 text-sm font-bold">{formatMoney(assetQuery.data?.marketCap ?? selectedAsset.marketCap, true)}</dd></div>
                     <div><dt className="font-mono text-[9px] uppercase tracking-widest text-[#53766a]">24h volume</dt><dd className="mt-1 text-sm font-bold">{formatMoney(assetQuery.data?.volume24h ?? selectedAsset.volume24h, true)}</dd></div>
                     <div><dt className="font-mono text-[9px] uppercase tracking-widest text-[#53766a]">Rank</dt><dd className="mt-1 text-sm font-bold">{assetQuery.data?.rank ?? selectedAsset.rank ?? 'Not reported'}</dd></div>
-                    <div><dt className="font-mono text-[9px] uppercase tracking-widest text-[#53766a]">Detail status</dt><dd className="mt-1 text-sm font-bold">{assetQuery.isFetching ? 'Updating…' : assetQuery.isError ? 'Snapshot only' : 'Current'}</dd></div>
+                    <div><dt className="font-mono text-[9px] uppercase tracking-widest text-[#53766a]">Data status</dt><dd className="mt-1 text-sm font-bold">{assetQuery.isFetching ? 'Updating…' : assetQuery.isError ? 'Cached data' : 'Live data'}</dd></div>
                   </dl>
                 </>
               ) : (
