@@ -1,6 +1,6 @@
 const CMC_BASE_URL = "https://pro-api.coinmarketcap.com";
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent";
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_BASE_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 function numberOr(value, fallback = 0) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -64,40 +64,45 @@ async function getOverview(limit) {
   };
 }
 
-async function callGemini(question, marketContext) {
-  console.log('Gemini API Key check:', GEMINI_API_KEY ? 'Present' : 'Missing');
-  console.log('Environment keys:', Object.keys(process.env).filter(k => k.includes('GEMINI') || k.includes('API')));
+async function callGroq(question, marketContext) {
+  console.log('Groq API Key check:', GROQ_API_KEY ? 'Present' : 'Missing');
+  console.log('Environment keys:', Object.keys(process.env).filter(k => k.includes('GROQ') || k.includes('API')));
   
-  if (!GEMINI_API_KEY) {
-    throw new Error("Gemini API key is not configured.");
+  if (!GROQ_API_KEY) {
+    throw new Error("Groq API key is not configured.");
   }
 
   const prompt = `Answer this market question in 1-2 sentences using this data: ${marketContext}. Question: ${question}`;
   
-  const response = await fetch(`${GEMINI_BASE_URL}?key=${GEMINI_API_KEY}`, {
+  const response = await fetch(GROQ_BASE_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${GROQ_API_KEY}`,
     },
     body: JSON.stringify({
-      contents: [{
-        parts: [{
-          text: prompt
-        }]
-      }]
+      model: "llama3-8b-8192",
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: 100,
+      temperature: 0.5
     })
   });
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${error}`);
+    throw new Error(`Groq API error: ${response.status} - ${error}`);
   }
 
   const data = await response.json();
-  const answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const answer = data.choices?.[0]?.message?.content;
   
   if (!answer) {
-    throw new Error("No response from Gemini");
+    throw new Error("No response from Groq");
   }
   
   return answer.trim();
@@ -148,17 +153,17 @@ module.exports = async function handler(req, res) {
     const marketContext = `Market: ${marketDirection} ${marketChange}% today. ${assetContext}`;
 
     try {
-      const answer = await callGemini(question, marketContext);
+      const answer = await callGroq(question, marketContext);
       
       res.json({
         answer,
         question,
         asOf: overview.asOf,
-        source: "Gemini AI · Live market data",
+        source: "Groq AI · Live market data",
       });
-    } catch (geminiError) {
-      console.error('Gemini error, falling back to simple response:', geminiError);
-      console.error('Error details:', geminiError.message);
+    } catch (groqError) {
+      console.error('Groq error, falling back to simple response:', groqError);
+      console.error('Error details:', groqError.message);
       
       // Fallback to simple response if Gemini fails
       const assetMovement = asset?.change24h === null
