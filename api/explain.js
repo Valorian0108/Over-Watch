@@ -236,26 +236,53 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    let question, assetSymbol;
-    
+    let question;
+
     if (method === 'POST') {
       question = req.body?.question;
-      assetSymbol = req.body?.assetSymbol;
     } else {
       question = query.get('q') || 'What is the market doing?';
-      assetSymbol = query.get('symbol');
     }
-    
+
     if (!question || question.length < 3) {
       res.status(400).json({ error: "Ask a question with at least 3 characters." });
       return;
     }
 
     const overview = await getOverview(50);
-    const requestedSymbol = assetSymbol?.toUpperCase();
-    const asset = requestedSymbol
-      ? overview.assets.find((item) => item.symbol === requestedSymbol)
-      : undefined;
+
+    // Extract asset symbol from question text instead of using UI selection
+    function extractSymbolFromQuestion(questionText, availableAssets) {
+      const questionLower = questionText.toLowerCase();
+
+      // Create a map of symbol -> asset and name -> asset
+      const symbolMap = new Map();
+      const nameMap = new Map();
+
+      for (const asset of availableAssets) {
+        symbolMap.set(asset.symbol.toLowerCase(), asset);
+        nameMap.set(asset.name.toLowerCase(), asset);
+      }
+
+      // Check for exact symbol matches first (BTC, ETH, ZEC, etc.)
+      for (const [symbol, asset] of symbolMap) {
+        if (questionLower.includes(symbol)) {
+          return asset;
+        }
+      }
+
+      // Check for name matches (Bitcoin, Ethereum, Zcash, etc.)
+      for (const [name, asset] of nameMap) {
+        if (questionLower.includes(name)) {
+          return asset;
+        }
+      }
+
+      return null;
+    }
+
+    const extractedAsset = extractSymbolFromQuestion(question, overview.assets);
+    const asset = extractedAsset || undefined;
 
     // Fetch news if asking about a specific asset
     let news = [];

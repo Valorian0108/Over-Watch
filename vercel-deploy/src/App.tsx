@@ -105,7 +105,7 @@ function useGetMarketAsset(symbol: string) {
 
 function useExplainMarketQuestion() {
   return useMutation({
-    mutationFn: async (params: { question: string; assetSymbol: string | null }) => {
+    mutationFn: async (params: { question: string }) => {
       console.log('Calling explain API with:', params);
       try {
         const result = await apiFetch<MarketExplanation>('/explain', {
@@ -281,8 +281,7 @@ function AskMarket({ explanation, onExplain }: { explanation: ReturnType<typeof 
             <input id="market-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={500} placeholder="Why is the market moving?" className="min-w-0 flex-1 bg-transparent py-2 text-sm text-[#f4f0e6] outline-none placeholder:text-[#aaa7b4]" />
             {question && <button type="button" onClick={() => setQuestion('')} className="rounded p-1 text-[#aaa7b4] hover:text-[#f4f0e6]" aria-label="Clear question"><X size={15} /></button>}
           </div>
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <span className="font-mono text-[10px] text-[#aaa7b4]">Context: market-wide</span>
+          <div className="mt-3 flex items-center justify-end gap-3">
             <button type="submit" disabled={!canAsk} className="inline-flex items-center gap-2 rounded-xl bg-[#c9e769] px-4 py-2.5 text-xs font-bold text-[#28283b] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45">
               {explanation.isPending ? <LoaderCircle size={14} className="animate-spin" /> : <Sparkles size={14} />}
               {explanation.isPending ? 'Reading…' : 'Explain'}
@@ -355,7 +354,7 @@ function Observatory() {
   ], []);
 
   const explain = (question: string) => {
-    explanation.mutate({ question, assetSymbol: null });
+    explanation.mutate({ question });
   };
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
