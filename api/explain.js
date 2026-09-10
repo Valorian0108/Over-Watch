@@ -145,7 +145,7 @@ Provide a clear, simple explanation using the data above. Focus on making the nu
         }
       ],
       temperature: 0.7,
-      max_tokens: 300,
+      max_tokens: 500,
       top_p: 1,
       stream: false
     })
@@ -165,11 +165,15 @@ Provide a clear, simple explanation using the data above. Focus on making the nu
   const choice = data.choices?.[0];
   if (choice) {
     // Handle both string and object message content
-    if (typeof choice.message?.content === 'string') {
+    if (typeof choice.message?.content === 'string' && choice.message.content) {
       answer = choice.message.content;
     } else if (choice.message?.content) {
       // If content is an object, try to extract text
       answer = JSON.stringify(choice.message.content);
+    } else if (choice.finish_reason === 'length') {
+      // If it hit token limit but produced no content, throw error to trigger fallback
+      console.error('API hit token limit but produced no content');
+      throw new Error("Experiential Labs hit token limit without producing content");
     }
   }
 
@@ -183,11 +187,7 @@ Provide a clear, simple explanation using the data above. Focus on making the nu
 
 async function getNewsForAsset(symbol) {
   try {
-    console.log('CryptoCompare API Key check:', CRYPTOCOMPARE_API_KEY ? 'Present' : 'Missing');
-    console.log('CryptoCompare API Key length:', CRYPTOCOMPARE_API_KEY?.length || 0);
-
     if (!CRYPTOCOMPARE_API_KEY) {
-      console.log('Skipping news fetch - no API key');
       return [];
     }
 
@@ -196,28 +196,19 @@ async function getNewsForAsset(symbol) {
     url.searchParams.set('sortOrder', 'latest');
     url.searchParams.set('categories', symbol === 'BTC' ? 'BTC,General' : 'General');
 
-    console.log('Fetching news from:', url.toString());
-
     const response = await fetch(url.toString(), {
       headers: {
         'Authorization': `Apikey ${CRYPTOCOMPARE_API_KEY}`,
       },
     });
 
-    console.log('CryptoCompare response status:', response.status);
-
     if (!response.ok) {
       console.error('CryptoCompare API error:', response.status);
-      const errorText = await response.text();
-      console.error('CryptoCompare error body:', errorText);
       return [];
     }
 
     const data = await response.json();
-    console.log('CryptoCompare response data keys:', Object.keys(data));
     const news = data.Data?.slice(0, 5) || [];
-
-    console.log('News items found:', news.length);
 
     return news.map(item => ({
       title: item.title,
@@ -337,7 +328,7 @@ ${newsContext}`;
           ? `${asset.name} is ${asset.change24h >= 0 ? "up" : "down"} ${Math.abs(asset.change24h).toFixed(2)}% today`
           : "";
       const assetTrend = asset?.change7d !== null && asset?.change30d !== null
-        ? `, ${asset.change7d >= 0 ? "up" : "down"} ${Math.abs(asset.change7d).toFixed(2)}% this week, and ${asset.change30d >= 0 ? "up" : "down"} ${Math.abs(asset.change30d).toFixed(2)}% this month`
+        ? `, ${asset?.change7d >= 0 ? "up" : "down"} ${Math.abs(asset?.change7d).toFixed(2)}% this week, and ${asset?.change30d >= 0 ? "up" : "down"} ${Math.abs(asset?.change30d).toFixed(2)}% this month`
         : "";
       const assetPrice = asset?.price === null || asset?.price === undefined
         ? "its current quoted price is not reported by this source"
@@ -345,7 +336,7 @@ ${newsContext}`;
 
       const answer = asset
         ? `${assetMovement}${assetTrend}; ${assetPrice}. In context, the wider market is ${marketDirection} by ${marketChange}% today.`
-        : `The wider market is ${marketDirection} by ${marketChange}% over the last 24 hours, with ${overview.btcDominance.toFixed(1)}% of the total market represented by Bitcoin.`;
+        : `The wider market is ${marketDirection} by ${marketChange}% over the last 24 hours, with ${overview.btcDominance ? overview.btcDominance.toFixed(1) + '%' : 'not available'} of the total market represented by Bitcoin.`;
 
       res.json({
         answer,
