@@ -1,6 +1,8 @@
 const CMC_BASE_URL = "https://pro-api.coinmarketcap.com";
 const EXPLABS_API_KEY = process.env.EXPLABS_API_KEY;
 const EXPLABS_BASE_URL = "https://api.experientiallabs.ai/v1/chat/completions";
+const CRYPTOCOMPARE_API_KEY = process.env.CRYPTOCOMPARE_API_KEY;
+const CRYPTOCOMPARE_BASE_URL = "https://min-api.cryptocompare.com/data";
 
 function numberOr(value, fallback = 0) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -55,12 +57,16 @@ async function getOverview(limit) {
     change24h: item.quote?.USD?.percent_change_24h ?? null,
     change7d: item.quote?.USD?.percent_change_7d ?? null,
     change30d: item.quote?.USD?.percent_change_30d ?? null,
+    marketCap: item.quote?.USD?.market_cap ?? null,
+    volume24h: item.quote?.USD?.volume_24h ?? null,
+    rank: item.cmc_rank ?? null,
   }));
 
   return {
     asOf: new Date().toISOString(),
     totalMarketCap: numberOr(global?.total_market_cap),
     marketCapChange24h: numberOr(global?.total_market_cap_yesterday_percentage_change),
+    totalVolume24h: numberOr(global?.total_volume_24h),
     btcDominance: numberOr(globalData.value.btc_dominance),
     assets,
   };
@@ -74,21 +80,30 @@ async function callExperientialLabs(question, marketContext) {
     throw new Error("Experiential Labs API key is not configured.");
   }
 
-  const systemPrompt = `You are a helpful financial assistant that explains market data in simple, clear language for users who find complex financial terminology overwhelming.
+  const systemPrompt = `You are a helpful financial assistant that explains cryptocurrency and RWA market data in simple, clear language for users who find complex financial terminology overwhelming.
+
+YOU HAVE ACCESS TO:
+- Current prices for top 50 crypto assets
+- Market caps, volumes, and rankings
+- Historical trends (24h, 7d, 30d changes)
+- Recent news headlines and context
+- Overall market state and BTC dominance
 
 YOUR SCOPE (what you CAN answer):
-- Current market state and trends
+- Current prices of any asset in the dataset
 - What the numbers mean in practical terms
+- Context about market movements using news when available
 - Comparisons between current and recent performance
 - Whether movements are significant or normal
 - Simple analogies to help understand market behavior
+- Recent news context when available
 
 YOUR LIMITATIONS (what you CANNOT do):
 - NEVER give trading signals, investment advice, or tell users what to buy/sell
 - NEVER make predictions about future prices
 - NEVER provide financial recommendations
-- If asked for trading advice, politely refuse and redirect to market explanation
-- If asked for predictions, acknowledge you can't predict the future
+- If asked for trading advice: "I can't give trading advice. I can help you understand what the current market numbers mean."
+- If asked for predictions: "I can't predict future prices. I can tell you about current market conditions."
 - Never make up data - only use what's provided
 
 HOW TO RESPOND:
@@ -96,18 +111,20 @@ HOW TO RESPOND:
 - Use everyday analogies (weather, temperature, traffic patterns)
 - Explain what percentages mean in practical terms
 - Give context about what's normal vs unusual in crypto markets
-- Under 3 sentences unless more context is genuinely helpful
-- If data is insufficient, acknowledge this and suggest what the numbers indicate
-- If asked for trading advice: "I can't give trading advice. I can help you understand what the current market numbers mean."
-- If asked for predictions: "I can't predict future prices. I can tell you about current market conditions."
+- Use news headlines to provide context for market movements when available
+- Don't overwhelm with numbers - focus on the story the numbers tell
+- Be helpful and informative rather than constantly saying "I don't have that data"
+- If asked for basic price info, provide it directly: "BTC is currently trading at $X"
+- If asked "what's happening" with an asset, use both numbers and news to tell the story
 
-Example good response: "BTC is down 5% today but had a spike of 10% this week, this could mean investors are being cautious after a big run-up."`;
+Example good response: "BTC is currently trading at $65,000. It's down 5% today but up 10% this week. Recent news suggests this could be related to the ETF approval announcement."`;
 
-  const userPrompt = `Market context: ${marketContext}
+  const userPrompt = `MARKET DATA:
+${marketContext}
 
 User question: ${question}
 
-Provide a clear, simple explanation using the context above. Focus on making the numbers meaningful rather than just restating them. Use analogies when helpful. If the question is outside your scope (trading advice, predictions), politely redirect to what you can explain.`;
+Provide a clear, simple explanation using the data above. Focus on making the numbers meaningful rather than just restating them. Use analogies when helpful. If the question is outside your scope (trading advice, predictions), politely redirect to what you can explain. Be helpful and direct.`;
 
   const response = await fetch(EXPLABS_BASE_URL, {
     method: 'POST',
@@ -164,6 +181,43 @@ Provide a clear, simple explanation using the context above. Focus on making the
   return answer.trim();
 }
 
+async function getNewsForAsset(symbol) {
+  try {
+    if (!CRYPTOCOMPARE_API_KEY) {
+      return [];
+    }
+
+    const url = new URL(`${CRYPTOCOMPARE_BASE_URL}/v2/news/`);
+    url.searchParams.set('lang', 'EN');
+    url.searchParams.set('sortOrder', 'latest');
+    url.searchParams.set('categories', symbol === 'BTC' ? 'BTC,General' : 'General');
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        'Authorization': `Apikey ${CRYPTOCOMPARE_API_KEY}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error('CryptoCompare API error:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const news = data.Data?.slice(0, 5) || [];
+
+    return news.map(item => ({
+      title: item.title,
+      body: item.body,
+      url: item.url,
+      publishedAt: item.published_on,
+    }));
+  } catch (error) {
+    console.error('Error fetching news:', error);
+    return [];
+  }
+}
+
 module.exports = async function handler(req, res) {
   const { method, url } = req;
   const urlObj = new URL(url, `http://${req.headers.host}`);
@@ -199,12 +253,18 @@ module.exports = async function handler(req, res) {
       ? overview.assets.find((item) => item.symbol === requestedSymbol)
       : undefined;
 
-    // Build enhanced market context with historical trends
+    // Fetch news if asking about a specific asset
+    let news = [];
+    if (asset) {
+      news = await getNewsForAsset(asset.symbol);
+    }
+
+    // Build comprehensive market context with all available data
     const marketDirection = overview.marketCapChange24h >= 0 ? "growing" : "cooling";
     const marketChange = Math.abs(overview.marketCapChange24h).toFixed(2);
     const marketSignificance = Math.abs(overview.marketCapChange24h) > 2 ? "significant" : "modest";
 
-    let assetContext = "";
+    let assetDetails = "";
     if (asset) {
       const asset24h = asset.change24h ?? 0;
       const asset7d = asset.change7d ?? 0;
@@ -216,10 +276,32 @@ module.exports = async function handler(req, res) {
 
       const volatility = Math.abs(asset24h) > 5 ? "highly volatile" : Math.abs(asset24h) > 2 ? "volatile" : "relatively stable";
 
-      assetContext = `${asset.name} (${asset.symbol}) is ${trend24h} ${Math.abs(asset24h).toFixed(2)}% today (${volatility}). Over the past week it's ${trend7d} ${Math.abs(asset7d).toFixed(2)}%, and over the past month ${trend30d} ${Math.abs(asset30d).toFixed(2)}%.`;
+      assetDetails = `
+${asset.name} (${asset.symbol}) details:
+- Current price: $${asset.price ? asset.price.toLocaleString('en-US', { maximumFractionDigits: asset.price < 1 ? 6 : 2 }) : 'Not available'}
+- 24h change: ${trend24h} ${Math.abs(asset24h).toFixed(2)}% (${volatility})
+- 7d change: ${trend7d} ${Math.abs(asset7d).toFixed(2)}%
+- 30d change: ${trend30d} ${Math.abs(asset30d).toFixed(2)}%
+- Market cap: $${asset.marketCap ? (asset.marketCap / 1e9).toFixed(2) + 'B' : 'Not available'}
+- 24h volume: $${asset.volume24h ? (asset.volume24h / 1e9).toFixed(2) + 'B' : 'Not available'}
+- Rank: ${asset.rank || 'Not available'}`;
     }
 
-    const marketContext = `Market overview: The market is ${marketDirection} by ${marketChange}% today (a ${marketSignificance} move). BTC dominance is ${overview.btcDominance.toFixed(1)}%. ${assetContext}`;
+    let newsContext = "";
+    if (news.length > 0) {
+      newsContext = `
+Recent news headlines:
+${news.map((item, i) => `${i + 1}. ${item.title}`).join('\n')}`;
+    }
+
+    const marketContext = `
+MARKET OVERVIEW:
+- Market direction: ${marketDirection} by ${marketChange}% today (a ${marketSignificance} move)
+- Total market cap: $${(overview.totalMarketCap / 1e12).toFixed(2)}T
+- 24h volume: $${(overview.totalVolume24h / 1e9).toFixed(2)}B
+- BTC dominance: ${overview.btcDominance.toFixed(1)}%
+${assetDetails}
+${newsContext}`;
 
     try {
       const answer = await callExperientialLabs(question, marketContext);
@@ -228,7 +310,7 @@ module.exports = async function handler(req, res) {
         answer,
         question,
         asOf: overview.asOf,
-        source: "Experiential Labs AI · Live market data with historical context",
+        source: "Experiential Labs AI · Live market data with news context",
       });
     } catch (explabsError) {
       console.error('Experiential Labs error, falling back to simple response:', explabsError);
@@ -255,7 +337,7 @@ module.exports = async function handler(req, res) {
         answer,
         question,
         asOf: overview.asOf,
-        source: "CoinMarketCap · Plain-language explanations with historical context (AI unavailable)",
+        source: "CoinMarketCap · Plain-language explanations with news context (AI unavailable)",
       });
     }
   } catch (error) {
