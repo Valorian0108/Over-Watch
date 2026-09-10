@@ -103,7 +103,19 @@ async function callExperientialLabs(question, marketContext) {
 
   const data = await response.json();
   console.log('Experiential Labs API response:', JSON.stringify(data, null, 2));
-  const answer = data.choices?.[0]?.message?.content;
+
+  // The response structure shows message is an object, need to handle it properly
+  let answer;
+  const choice = data.choices?.[0];
+  if (choice) {
+    // Handle both string and object message content
+    if (typeof choice.message?.content === 'string') {
+      answer = choice.message.content;
+    } else if (choice.message?.content) {
+      // If content is an object, try to extract text
+      answer = JSON.stringify(choice.message.content);
+    }
+  }
 
   if (!answer) {
     console.error('Response structure:', JSON.stringify(data, null, 2));
