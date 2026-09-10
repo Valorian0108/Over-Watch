@@ -183,7 +183,11 @@ Provide a clear, simple explanation using the data above. Focus on making the nu
 
 async function getNewsForAsset(symbol) {
   try {
+    console.log('CryptoCompare API Key check:', CRYPTOCOMPARE_API_KEY ? 'Present' : 'Missing');
+    console.log('CryptoCompare API Key length:', CRYPTOCOMPARE_API_KEY?.length || 0);
+
     if (!CRYPTOCOMPARE_API_KEY) {
+      console.log('Skipping news fetch - no API key');
       return [];
     }
 
@@ -192,19 +196,28 @@ async function getNewsForAsset(symbol) {
     url.searchParams.set('sortOrder', 'latest');
     url.searchParams.set('categories', symbol === 'BTC' ? 'BTC,General' : 'General');
 
+    console.log('Fetching news from:', url.toString());
+
     const response = await fetch(url.toString(), {
       headers: {
         'Authorization': `Apikey ${CRYPTOCOMPARE_API_KEY}`,
       },
     });
 
+    console.log('CryptoCompare response status:', response.status);
+
     if (!response.ok) {
       console.error('CryptoCompare API error:', response.status);
+      const errorText = await response.text();
+      console.error('CryptoCompare error body:', errorText);
       return [];
     }
 
     const data = await response.json();
+    console.log('CryptoCompare response data keys:', Object.keys(data));
     const news = data.Data?.slice(0, 5) || [];
+
+    console.log('News items found:', news.length);
 
     return news.map(item => ({
       title: item.title,
@@ -260,9 +273,10 @@ module.exports = async function handler(req, res) {
     }
 
     // Build comprehensive market context with all available data
-    const marketDirection = overview.marketCapChange24h >= 0 ? "growing" : "cooling";
-    const marketChange = Math.abs(overview.marketCapChange24h).toFixed(2);
-    const marketSignificance = Math.abs(overview.marketCapChange24h) > 2 ? "significant" : "modest";
+    const marketCapChange24h = overview.marketCapChange24h ?? 0;
+    const marketDirection = marketCapChange24h >= 0 ? "growing" : "cooling";
+    const marketChange = Math.abs(marketCapChange24h).toFixed(2);
+    const marketSignificance = Math.abs(marketCapChange24h) > 2 ? "significant" : "modest";
 
     let assetDetails = "";
     if (asset) {
@@ -297,9 +311,9 @@ ${news.map((item, i) => `${i + 1}. ${item.title}`).join('\n')}`;
     const marketContext = `
 MARKET OVERVIEW:
 - Market direction: ${marketDirection} by ${marketChange}% today (a ${marketSignificance} move)
-- Total market cap: $${(overview.totalMarketCap / 1e12).toFixed(2)}T
-- 24h volume: $${(overview.totalVolume24h / 1e9).toFixed(2)}B
-- BTC dominance: ${overview.btcDominance.toFixed(1)}%
+- Total market cap: $${overview.totalMarketCap ? (overview.totalMarketCap / 1e12).toFixed(2) + 'T' : 'Not available'}
+- 24h volume: $${overview.totalVolume24h ? (overview.totalVolume24h / 1e9).toFixed(2) + 'B' : 'Not available'}
+- BTC dominance: ${overview.btcDominance ? overview.btcDominance.toFixed(1) + '%' : 'Not available'}
 ${assetDetails}
 ${newsContext}`;
 
