@@ -1,6 +1,6 @@
 const CMC_BASE_URL = "https://pro-api.coinmarketcap.com";
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_BASE_URL = "https://api.groq.com/openai/v1/chat/completions";
+const EXPLABS_API_KEY = process.env.EXPLABS_API_KEY;
+const EXPLABS_BASE_URL = "https://api.experientiallabs.ai/v1/chat/completions";
 
 function numberOr(value, fallback = 0) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -64,24 +64,24 @@ async function getOverview(limit) {
   };
 }
 
-async function callGroq(question, marketContext) {
-  console.log('Groq API Key check:', GROQ_API_KEY ? 'Present' : 'Missing');
-  console.log('Groq API Key length:', GROQ_API_KEY?.length || 0);
-  
-  if (!GROQ_API_KEY) {
-    throw new Error("Groq API key is not configured.");
+async function callExperientialLabs(question, marketContext) {
+  console.log('Experiential Labs API Key check:', EXPLABS_API_KEY ? 'Present' : 'Missing');
+  console.log('Experiential Labs API Key length:', EXPLABS_API_KEY?.length || 0);
+
+  if (!EXPLABS_API_KEY) {
+    throw new Error("Experiential Labs API key is not configured.");
   }
 
   const prompt = `Answer this market question in 1-2 sentences using this data: ${marketContext}. Question: ${question}`;
-  
-  const response = await fetch(GROQ_BASE_URL, {
+
+  const response = await fetch(EXPLABS_BASE_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GROQ_API_KEY}`,
+      'Authorization': `Bearer ${EXPLABS_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "llama3-8b-8192",
+      model: "qwen3.8-27b",
       messages: [
         {
           role: "user",
@@ -91,25 +91,24 @@ async function callGroq(question, marketContext) {
       temperature: 0.7,
       max_tokens: 100,
       top_p: 1,
-      stream: false,
-      stop: null
+      stream: false
     })
   });
 
   if (!response.ok) {
     const error = await response.text();
-    console.error('Groq API error details:', error);
-    throw new Error(`Groq API error: ${response.status} - ${error}`);
+    console.error('Experiential Labs API error details:', error);
+    throw new Error(`Experiential Labs API error: ${response.status} - ${error}`);
   }
 
   const data = await response.json();
-  console.log('Groq API response:', data);
+  console.log('Experiential Labs API response:', data);
   const answer = data.choices?.[0]?.message?.content;
-  
+
   if (!answer) {
-    throw new Error("No response from Groq");
+    throw new Error("No response from Experiential Labs");
   }
-  
+
   return answer.trim();
 }
 
@@ -148,29 +147,29 @@ module.exports = async function handler(req, res) {
       ? overview.assets.find((item) => item.symbol === requestedSymbol)
       : undefined;
 
-    // Build market context for Gemini
+    // Build market context for Experiential Labs
     const marketDirection = overview.marketCapChange24h >= 0 ? "growing" : "cooling";
     const marketChange = Math.abs(overview.marketCapChange24h).toFixed(2);
     const assetContext = asset
       ? `${asset.name} (${asset.symbol}) is ${asset.change24h >= 0 ? "up" : "down"} ${Math.abs(asset.change24h).toFixed(2)}%`
       : "";
-    
+
     const marketContext = `Market: ${marketDirection} ${marketChange}% today. ${assetContext}`;
 
     try {
-      const answer = await callGroq(question, marketContext);
-      
+      const answer = await callExperientialLabs(question, marketContext);
+
       res.json({
         answer,
         question,
         asOf: overview.asOf,
-        source: "Groq AI · Live market data",
+        source: "Experiential Labs AI · Live market data",
       });
-    } catch (groqError) {
-      console.error('Groq error, falling back to simple response:', groqError);
-      console.error('Error details:', groqError.message);
-      
-      // Fallback to simple response if Gemini fails
+    } catch (explabsError) {
+      console.error('Experiential Labs error, falling back to simple response:', explabsError);
+      console.error('Error details:', explabsError.message);
+
+      // Fallback to simple response if Experiential Labs fails
       const assetMovement = asset?.change24h === null
         ? `${asset.name} has a live identity record, but live pricing data is not currently available for this asset`
         : asset
