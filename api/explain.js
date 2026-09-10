@@ -89,7 +89,7 @@ async function callExperientialLabs(question, marketContext) {
         }
       ],
       temperature: 0.7,
-      max_tokens: 100,
+      max_tokens: 150,
       top_p: 1,
       stream: false
     })
@@ -102,10 +102,11 @@ async function callExperientialLabs(question, marketContext) {
   }
 
   const data = await response.json();
-  console.log('Experiential Labs API response:', data);
+  console.log('Experiential Labs API response:', JSON.stringify(data, null, 2));
   const answer = data.choices?.[0]?.message?.content;
 
   if (!answer) {
+    console.error('Response structure:', JSON.stringify(data, null, 2));
     throw new Error("No response from Experiential Labs");
   }
 

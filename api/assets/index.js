@@ -90,14 +90,15 @@ async function fetchCryptoLogos(ids) {
 
 async function fetchRwaLogos(rwaIds) {
   const logoMap = new Map();
-  
+
   if (rwaIds.length === 0) return logoMap;
-  
+
   try {
+    // RWA info endpoint accepts id parameter, not rwa_id
     const info = await cmcGet("/v5/real-world-assets/info", {
-      rwa_id: rwaIds.join(","),
+      id: rwaIds.join(","),
     });
-    
+
     for (const asset of info.data ?? []) {
       if (asset.rwa_id && asset.about?.logo) {
         logoMap.set(asset.rwa_id, asset.about.logo);
