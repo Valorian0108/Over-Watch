@@ -72,7 +72,13 @@ async function callExperientialLabs(question, marketContext) {
     throw new Error("Experiential Labs API key is not configured.");
   }
 
-  const prompt = `Answer this market question in 1-2 sentences using this data: ${marketContext}. Question: ${question}`;
+  const systemPrompt = "You are a helpful financial assistant that explains market data in simple, clear language for users who find complex financial terminology overwhelming. Use everyday analogies when helpful. Keep explanations under 3 sentences. Never make up data - only use what's provided.";
+
+  const userPrompt = `Market context: ${marketContext}
+
+User question: ${question}
+
+Provide a clear, simple explanation. If the data doesn't contain enough information to answer specifically, acknowledge that limitation and suggest what the available numbers might indicate.`;
 
   const response = await fetch(EXPLABS_BASE_URL, {
     method: 'POST',
@@ -84,12 +90,16 @@ async function callExperientialLabs(question, marketContext) {
       model: "qwen3.8-27b",
       messages: [
         {
+          role: "system",
+          content: systemPrompt
+        },
+        {
           role: "user",
-          content: prompt
+          content: userPrompt
         }
       ],
       temperature: 0.7,
-      max_tokens: 150,
+      max_tokens: 300,
       top_p: 1,
       stream: false
     })
