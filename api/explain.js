@@ -39,16 +39,19 @@ async function cmcGet(path, queryParams) {
 }
 
 async function getOverview(limit) {
-  const [globalData, cryptoData] = await Promise.allSettled([
+  const [globalData, cryptoData, rwaData] = await Promise.allSettled([
     cmcGet("/v1/global-metrics/quotes/latest", { convert: "USD" }),
     cmcGet("/v1/cryptocurrency/listings/latest", { start: 1, limit, convert: "USD" }),
+    cmcGet("/v5/real-world-assets/assets/list", { listing_status: "active", limit: 20 }),
   ]);
 
   if (globalData.status === "rejected") throw globalData.reason;
   if (cryptoData.status === "rejected") throw cryptoData.reason;
 
   const global = globalData.value.quote?.USD;
-  const assets = cryptoData.value.map((item, index) => ({
+
+  // Process crypto assets
+  const cryptoAssets = cryptoData.value.map((item, index) => ({
     id: numberOr(item.id, index + 1),
     name: item.name,
     symbol: item.symbol?.toUpperCase(),
@@ -61,6 +64,31 @@ async function getOverview(limit) {
     volume24h: item.quote?.USD?.volume_24h ?? null,
     rank: item.cmc_rank ?? null,
   }));
+
+  // Process RWA assets
+  let rwaAssets = [];
+  if (rwaData.status === "fulfilled") {
+    const rwaList = rwaData.value.rwa_assets ?? [];
+    rwaAssets = rwaList.map((item, index) => {
+      const usdQuote = item.quotes?.find(q => q.symbol === "USD");
+      return {
+        id: numberOr(item.rwa_id, index + 1000),
+        name: item.name || item.symbol || `RWA${index + 1}`,
+        symbol: item.symbol?.toUpperCase() || `RWA${index + 1}`,
+        kind: "rwa",
+        price: usdQuote?.average_tokenized_price ?? null,
+        change24h: null, // RWA quotes don't include 24h change in this endpoint
+        change7d: null,
+        change30d: null,
+        marketCap: usdQuote?.tokenized_market_cap ?? null,
+        volume24h: usdQuote?.tokenized_volume_24h ?? null,
+        rank: item.rwa_rank ?? null,
+      };
+    });
+  }
+
+  // Combine both asset types
+  const assets = [...cryptoAssets, ...rwaAssets];
 
   return {
     asOf: new Date().toISOString(),
@@ -249,7 +277,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const overview = await getOverview(50);
+    const overview = await getOverview(100);
 
     // Extract asset symbol from question text instead of using UI selection
     function extractSymbolFromQuestion(questionText, availableAssets) {
