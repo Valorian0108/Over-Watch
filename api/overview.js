@@ -98,8 +98,11 @@ async function fetchRwaLogos(rwaIds) {
     const info = await cmcGet("/v5/real-world-assets/info", {
       rwa_id: rwaIds.join(","),
     });
-    
-    for (const asset of info.data ?? []) {
+
+    // CMC RWA info returns data.rwa_assets structure
+    const rwaAssets = info.rwa_assets ?? [];
+
+    for (const asset of rwaAssets) {
       if (asset.rwa_id && asset.about?.logo) {
         logoMap.set(asset.rwa_id, asset.about.logo);
       } else {
