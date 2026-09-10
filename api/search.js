@@ -94,9 +94,9 @@ async function fetchRwaLogos(rwaIds) {
   if (rwaIds.length === 0) return logoMap;
   
   try {
-    // RWA info endpoint accepts id parameter, not rwa_id
+    // RWA info endpoint requires rwa_id parameter
     const info = await cmcGet("/v5/real-world-assets/info", {
-      id: rwaIds.join(","),
+      rwa_id: rwaIds.join(","),
     });
     
     for (const asset of info.data ?? []) {
