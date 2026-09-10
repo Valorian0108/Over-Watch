@@ -124,7 +124,7 @@ ${marketContext}
 
 User question: ${question}
 
-Provide a clear, simple explanation using the data above. Focus on making the numbers meaningful rather than just restating them. Use analogies when helpful. If the question is outside your scope (trading advice, predictions), politely redirect to what you can explain. Be helpful and direct.`;
+Answer directly and concisely. Use the data provided. Be conversational but brief. Under 2 sentences if possible.`;
 
   const response = await fetch(EXPLABS_BASE_URL, {
     method: 'POST',
@@ -263,50 +263,24 @@ module.exports = async function handler(req, res) {
       news = await getNewsForAsset(asset.symbol);
     }
 
-    // Build comprehensive market context with all available data
+    // Build simplified market context
     const marketCapChange24h = overview.marketCapChange24h ?? 0;
-    const marketDirection = marketCapChange24h >= 0 ? "growing" : "cooling";
+    const marketDirection = marketCapChange24h >= 0 ? "up" : "down";
     const marketChange = Math.abs(marketCapChange24h).toFixed(2);
-    const marketSignificance = Math.abs(marketCapChange24h) > 2 ? "significant" : "modest";
 
     let assetDetails = "";
     if (asset) {
       const asset24h = asset.change24h ?? 0;
-      const asset7d = asset.change7d ?? 0;
-      const asset30d = asset.change30d ?? 0;
-
       const trend24h = asset24h >= 0 ? "up" : "down";
-      const trend7d = asset7d >= 0 ? "up" : "down";
-      const trend30d = asset30d >= 0 ? "up" : "down";
-
-      const volatility = Math.abs(asset24h) > 5 ? "highly volatile" : Math.abs(asset24h) > 2 ? "volatile" : "relatively stable";
-
-      assetDetails = `
-${asset.name} (${asset.symbol}) details:
-- Current price: $${asset.price ? asset.price.toLocaleString('en-US', { maximumFractionDigits: asset.price < 1 ? 6 : 2 }) : 'Not available'}
-- 24h change: ${trend24h} ${Math.abs(asset24h).toFixed(2)}% (${volatility})
-- 7d change: ${trend7d} ${Math.abs(asset7d).toFixed(2)}%
-- 30d change: ${trend30d} ${Math.abs(asset30d).toFixed(2)}%
-- Market cap: $${asset.marketCap ? (asset.marketCap / 1e9).toFixed(2) + 'B' : 'Not available'}
-- 24h volume: $${asset.volume24h ? (asset.volume24h / 1e9).toFixed(2) + 'B' : 'Not available'}
-- Rank: ${asset.rank || 'Not available'}`;
+      assetDetails = `${asset.name} is ${trend24h} ${Math.abs(asset24h).toFixed(2)}% today, price: $${asset.price ? asset.price.toLocaleString('en-US', { maximumFractionDigits: asset.price < 1 ? 6 : 2 }) : 'N/A'}`;
     }
 
     let newsContext = "";
     if (news.length > 0) {
-      newsContext = `
-Recent news headlines:
-${news.map((item, i) => `${i + 1}. ${item.title}`).join('\n')}`;
+      newsContext = `Recent news: ${news[0].title}`;
     }
 
-    const marketContext = `
-MARKET OVERVIEW:
-- Market direction: ${marketDirection} by ${marketChange}% today (a ${marketSignificance} move)
-- Total market cap: $${overview.totalMarketCap ? (overview.totalMarketCap / 1e12).toFixed(2) + 'T' : 'Not available'}
-- 24h volume: $${overview.totalVolume24h ? (overview.totalVolume24h / 1e9).toFixed(2) + 'B' : 'Not available'}
-- BTC dominance: ${overview.btcDominance ? overview.btcDominance.toFixed(1) + '%' : 'Not available'}
-${assetDetails}
-${newsContext}`;
+    const marketContext = `Market: ${marketDirection} ${marketChange}% today. ${assetDetails} ${newsContext}`;
 
     try {
       const answer = await callExperientialLabs(question, marketContext);
