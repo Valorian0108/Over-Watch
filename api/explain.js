@@ -92,6 +92,7 @@ YOUR LIMITATIONS (what you CANNOT do):
 - Never make up data - only use what's provided
 
 HOW TO RESPOND:
+- Be conversational and direct - use "this could mean..." instead of vague "suggesting" language
 - Use everyday analogies (weather, temperature, traffic patterns)
 - Explain what percentages mean in practical terms
 - Give context about what's normal vs unusual in crypto markets
@@ -100,7 +101,7 @@ HOW TO RESPOND:
 - If asked for trading advice: "I can't give trading advice. I can help you understand what the current market numbers mean."
 - If asked for predictions: "I can't predict future prices. I can tell you about current market conditions."
 
-Example good response: "The market is down 2% today, which is like a rainy day in the crypto world - not a storm, just cooler than usual. Most coins are following this trend."`;
+Example good response: "BTC is down 5% today but had a spike of 10% this week, this could mean investors are being cautious after a big run-up."`;
 
   const userPrompt = `Market context: ${marketContext}
 
@@ -192,7 +193,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const overview = await getOverview(8);
+    const overview = await getOverview(50);
     const requestedSymbol = assetSymbol?.toUpperCase();
     const asset = requestedSymbol
       ? overview.assets.find((item) => item.symbol === requestedSymbol)
