@@ -1,6 +1,8 @@
 const CMC_BASE_URL = "https://pro-api.coinmarketcap.com";
 const EXPLABS_API_KEY = process.env.EXPLABS_API_KEY;
 const EXPLABS_BASE_URL = "https://api.experientiallabs.ai/v1/chat/completions";
+const QWEN_API_KEY = process.env.QWEN_API_KEY;
+const QWEN_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
 const CRYPTOCOMPARE_API_KEY = process.env.CRYPTOCOMPARE_API_KEY;
 const CRYPTOCOMPARE_BASE_URL = "https://min-api.cryptocompare.com/data";
 
@@ -213,6 +215,102 @@ Answer directly and concisely. Use the data provided. Be conversational but brie
   return answer.trim();
 }
 
+async function callQwen(question, marketContext) {
+  console.log('Qwen API Key check:', QWEN_API_KEY ? 'Present' : 'Missing');
+  console.log('Qwen API Key length:', QWEN_API_KEY?.length || 0);
+
+  if (!QWEN_API_KEY) {
+    throw new Error("Qwen API key is not configured.");
+  }
+
+  const systemPrompt = `You are a helpful financial assistant that explains cryptocurrency and RWA market data in simple, clear language for users who find complex financial terminology overwhelming.
+
+YOU HAVE ACCESS TO:
+- Current prices for top 100 crypto assets
+- Market caps, volumes, and rankings
+- Historical trends (24h, 7d, 30d changes)
+- Recent news headlines and context
+- Overall market state and BTC dominance
+
+YOUR SCOPE (what you CAN answer):
+- Current prices of any asset in the dataset
+- What the numbers mean in practical terms
+- Context about market movements using news when available
+- Comparisons between current and recent performance
+- Whether movements are significant or normal
+- Simple analogies to help understand market behavior
+
+YOUR LIMITATIONS (what you CANNOT do):
+- NEVER give trading signals, investment advice, or tell users what to buy/sell
+- NEVER make predictions about future prices
+- NEVER provide financial recommendations
+- If asked for trading advice: "I can't give trading advice. I can help you understand what the current market numbers mean."
+- If asked for predictions: "I can't predict future prices. I can tell you about current market conditions."
+- Never make up data - only use what's provided
+
+HOW TO RESPOND:
+- Be conversational and direct - use "this could mean..." instead of vague "suggesting" language
+- Use everyday analogies (weather, temperature, traffic patterns)
+- Explain what percentages mean in practical terms
+- Give context about what's normal vs unusual in crypto markets
+- Use news headlines to provide context for market movements when available
+- Don't overwhelm with numbers - focus on the story the numbers tell
+- Be helpful and informative rather than constantly saying "I don't have that data"
+- If asked for basic price info, provide it directly: "BTC is currently trading at $X"
+- If asked "what's happening" with an asset, use both numbers and news to tell the story
+
+Example good response: "BTC is currently trading at $65,000. It's down 5% today but up 10% this week. Recent news suggests this could be related to the ETF approval announcement."`;
+
+  const userPrompt = `MARKET DATA:
+${marketContext}
+
+User question: ${question}
+
+Answer directly and concisely. Use the data provided. Be conversational but brief. Under 2 sentences if possible.`;
+
+  const response = await fetch(QWEN_BASE_URL + "/chat/completions", {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${QWEN_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "qwen3.8-27b",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: userPrompt
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 500,
+      top_p: 1
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('Qwen API error details:', error);
+    throw new Error(`Qwen API error: ${response.status} - ${error}`);
+  }
+
+  const data = await response.json();
+  console.log('Qwen API response:', JSON.stringify(data, null, 2));
+
+  const answer = data.choices?.[0]?.message?.content;
+
+  if (!answer) {
+    console.error('Response structure:', JSON.stringify(data, null, 2));
+    throw new Error("No response from Qwen");
+  }
+
+  return answer.trim();
+}
+
 async function getNewsForAsset(symbol) {
   try {
     if (!CRYPTOCOMPARE_API_KEY) {
@@ -347,8 +445,21 @@ module.exports = async function handler(req, res) {
         source: "Experiential Labs AI · Live market data with news context",
       });
     } catch (explabsError) {
-      console.error('Experiential Labs error, falling back to simple response:', explabsError);
+      console.error('Experiential Labs error, trying Qwen fallback:', explabsError);
       console.error('Error details:', explabsError.message);
+
+      try {
+        const answer = await callQwen(question, marketContext);
+
+        res.json({
+          answer,
+          question,
+          asOf: overview.asOf,
+          source: "Qwen AI (Bitget Eco) · Live market data with news context",
+        });
+      } catch (qwenError) {
+        console.error('Qwen also failed, falling back to simple response:', qwenError);
+        console.error('Error details:', qwenError.message);
 
       // Fallback to simple response if Experiential Labs fails
       const assetMovement = asset?.change24h === null
