@@ -2,7 +2,7 @@ const CMC_BASE_URL = "https://pro-api.coinmarketcap.com";
 const EXPLABS_API_KEY = process.env.EXPLABS_API_KEY;
 const EXPLABS_BASE_URL = "https://api.experientiallabs.ai/v1/chat/completions";
 const QWEN_API_KEY = process.env.QWEN_API_KEY;
-const QWEN_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
+const QWEN_BASE_URL = "https://hackathon.bitgetops.com/v1";
 const CRYPTOCOMPARE_API_KEY = process.env.CRYPTOCOMPARE_API_KEY;
 const CRYPTOCOMPARE_BASE_URL = "https://min-api.cryptocompare.com/data";
 
@@ -163,7 +163,7 @@ Answer directly and concisely. Use the data provided. Be conversational but brie
       'Authorization': `Bearer ${EXPLABS_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "qwen3.8-27b",
+      model: "qwen3.8-max",
       messages: [
         {
           role: "system",
@@ -275,7 +275,7 @@ Answer directly and concisely. Use the data provided. Be conversational but brie
       'Authorization': `Bearer ${QWEN_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "qwen3.8-27b",
+      model: "qwen3.8-max",
       messages: [
         {
           role: "system",
