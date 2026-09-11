@@ -52,7 +52,7 @@ OverWatch is a single-page web application built for the CoinMarketCap API Hacka
 - Styling: Tailwind CSS v4
 - Data Source: CoinMarketCap Pro API
 - Deployment: Vercel (serverless functions)
-- AI Providers: Experiential Labs API (primary), Bitget Qwen (fallback)
+- AI Providers: Experiential Labs API (primary), Qwen (fallback)
 
 ### CoinMarketCap API Endpoints Used
 - `/v1/global-metrics/quotes/latest` - Global market metrics
