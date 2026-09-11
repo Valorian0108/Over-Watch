@@ -94,9 +94,13 @@ async function fetchRwaLogos(rwaIds) {
   if (rwaIds.length === 0) return logoMap;
   
   try {
-    // RWA info endpoint requires rwa_id parameter
+    // RWA info endpoint requires rwa_id parameter - only pass valid numeric IDs
+    const validIds = rwaIds.filter(id => id !== undefined && id !== null && !isNaN(id));
+    
+    if (validIds.length === 0) return logoMap;
+
     const info = await cmcGet("/v5/real-world-assets/info", {
-      rwa_id: rwaIds.join(","),
+      rwa_id: validIds.join(","),
     });
 
     // CMC RWA info returns data.rwa_assets structure
@@ -106,7 +110,7 @@ async function fetchRwaLogos(rwaIds) {
       if (asset.rwa_id && asset.about?.logo) {
         logoMap.set(asset.rwa_id, asset.about.logo);
       } else {
-        // Fallback to placeholder based on RWA ID
+        // Fallback to placeholder
         logoMap.set(asset.rwa_id, null);
       }
     }
