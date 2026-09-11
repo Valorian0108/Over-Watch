@@ -461,29 +461,30 @@ module.exports = async function handler(req, res) {
         console.error('Qwen also failed, falling back to simple response:', qwenError);
         console.error('Error details:', qwenError.message);
 
-      // Fallback to simple response if Experiential Labs fails
-      const assetMovement = asset?.change24h === null
-        ? `${asset.name} has a live identity record, but live pricing data is not currently available for this asset`
-        : asset
-          ? `${asset.name} is ${asset.change24h >= 0 ? "up" : "down"} ${Math.abs(asset.change24h).toFixed(2)}% today`
+        // Fallback to simple response if Experiential Labs fails
+        const assetMovement = asset?.change24h === null
+          ? `${asset.name} has a live identity record, but live pricing data is not currently available for this asset`
+          : asset
+            ? `${asset.name} is ${asset.change24h >= 0 ? "up" : "down"} ${Math.abs(asset.change24h).toFixed(2)}% today`
+            : "";
+        const assetTrend = asset?.change7d !== null && asset?.change30d !== null
+          ? `, ${asset?.change7d >= 0 ? "up" : "down"} ${Math.abs(asset?.change7d).toFixed(2)}% this week, and ${asset?.change30d >= 0 ? "up" : "down"} ${Math.abs(asset?.change30d).toFixed(2)}% this month`
           : "";
-      const assetTrend = asset?.change7d !== null && asset?.change30d !== null
-        ? `, ${asset?.change7d >= 0 ? "up" : "down"} ${Math.abs(asset?.change7d).toFixed(2)}% this week, and ${asset?.change30d >= 0 ? "up" : "down"} ${Math.abs(asset?.change30d).toFixed(2)}% this month`
-        : "";
-      const assetPrice = asset?.price === null || asset?.price === undefined
-        ? "its current quoted price is not reported by this source"
-        : `its current price is $${asset.price.toLocaleString("en-US", { maximumFractionDigits: asset.price < 1 ? 6 : 2 })}`;
+        const assetPrice = asset?.price === null || asset?.price === undefined
+          ? "its current quoted price is not reported by this source"
+          : `its current price is $${asset.price.toLocaleString("en-US", { maximumFractionDigits: asset.price < 1 ? 6 : 2 })}`;
 
-      const answer = asset
-        ? `${assetMovement}${assetTrend}; ${assetPrice}. In context, the wider market is ${marketDirection} by ${marketChange}% today.`
-        : `The wider market is ${marketDirection} by ${marketChange}% over the last 24 hours, with ${overview.btcDominance ? overview.btcDominance.toFixed(1) + '%' : 'not available'} of the total market represented by Bitcoin.`;
+        const answer = asset
+          ? `${assetMovement}${assetTrend}; ${assetPrice}. In context, the wider market is ${marketDirection} by ${marketChange}% today.`
+          : `The wider market is ${marketDirection} by ${marketChange}% over the last 24 hours, with ${overview.btcDominance ? overview.btcDominance.toFixed(1) + '%' : 'not available'} of the total market represented by Bitcoin.`;
 
-      res.json({
-        answer,
-        question,
-        asOf: overview.asOf,
-        source: "CoinMarketCap · Plain-language explanations with news context (AI unavailable)",
-      });
+        res.json({
+          answer,
+          question,
+          asOf: overview.asOf,
+          source: "CoinMarketCap · Plain-language explanations with news context (AI unavailable)",
+        });
+      }
     }
   } catch (error) {
     console.error('Explain API error:', error);
