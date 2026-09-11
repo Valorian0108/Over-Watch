@@ -4,142 +4,125 @@ A focused market observatory that presents live crypto and Real World Asset (RWA
 
 ---
 
-## Project Overview
+## The Idea
 
-OverWatch is a single-page web application built for the CoinMarketCap API Hackathon (September 9-30, 2026). The project addresses a common issue in cryptocurrency data presentation: traditional market tools often feature dense numerical interfaces, dark terminal-style designs, and complex metrics that can overwhelm users who prefer simpler, more intuitive data consumption.
+Most market tools feel dense, number-heavy, and intimidating especially for people who do not enjoy complex metrics or math. OverWatch addresses this by taking real live data from CoinMarketCap (crypto prices plus Real World Assets) and presenting it in a way that feels alive and human instead of technical.
 
-The application provides live market data from CoinMarketCap through a clean, accessible interface that prioritizes user experience over feature density. It demonstrates effective use of multiple CMC API endpoints including market overview, asset listings, RWA data, and search functionality.
+The central approach:
 
-## Architecture and Implementation
+- Take live data from CoinMarketCap for both cryptocurrency and RWA assets
+- Present it through an interface that feels like a living thing, not a traditional terminal-style tool
+- Use smooth visual transitions and motion so the "live" feeling comes from the page itself, not just ticking numbers
+- Apply a playful, doodle-inspired visual style instead of the standard dark terminal aesthetic
+- Include an AI layer that explains the raw CMC numbers in plain, everyday language so people who normally avoid heavy market data can still understand what is happening
 
-### Technical Stack
+---
+
+## What OverWatch Does
+
+OverWatch is a single-page web application built for the CoinMarketCap API Hackathon (September 9-30, 2026). It provides:
+
+**Live Market Data**
+- Real-time global market metrics including total market cap, volume, and BTC dominance
+- Live cryptocurrency listings with prices and performance data
+- Real World Asset live pricing data with market cap and volume
+- Asset search functionality across both crypto and RWA datasets
+- Individual asset detail views
+
+**Interface Design**
+- Light, approachable visual design with controlled color usage
+- Smooth animations and transitions for a living, responsive feel
+- Asset filtering by type (All, Crypto, RWA)
+- Clear information hierarchy that prioritizes readability over data density
+- Auto-refresh functionality at 60-second intervals with conservative API credit usage
+
+**Plain Language Explanations**
+- AI integration that explains market data in accessible language
+- Dual AI setup with automatic fallback between providers
+- Rule-based fallback responses when AI services are unavailable
+- Responses grounded in real market data without invented values
+
+---
+
+## Technical Implementation
+
+### Stack
 - Frontend: React with TypeScript
 - Build Tool: Vite
 - Styling: Tailwind CSS v4
 - Data Source: CoinMarketCap Pro API
 - Deployment: Vercel (serverless functions)
-- API Integration: Multiple CMC endpoints for comprehensive market data
+- AI Providers: Experiential Labs API (primary), Bitget Qwen (fallback)
 
-### Core Features
-- Live market overview with global metrics
-- Cryptocurrency and RWA asset listings
-- Asset search and filtering capabilities
-- Individual asset detail views
-- Automatic data refresh
-- Plain-language market explanations
-- Public deployment with live API integration
-
-### API Endpoints Utilized
+### CoinMarketCap API Endpoints Used
 - `/v1/global-metrics/quotes/latest` - Global market metrics
 - `/v1/cryptocurrency/listings/latest` - Crypto asset data
 - `/v5/real-world-assets/assets/list` - RWA live pricing data
 - `/v2/cryptocurrency/info` - Asset details and logo information
 - `/v5/real-world-assets/info` - RWA specific information
 
-## Problem Statement
+### Architecture
+- Frontend: React application deployed via Vercel
+- Backend: Vercel serverless functions for API proxying
+- Environment Variables: CMC API key, AI provider keys configured for production and preview environments
+- Git Workflow: Feature branch development with preview deployments before production merge
+- Public Repository: Clean commit history without sensitive credentials
 
-Cryptocurrency market data interfaces traditionally follow similar patterns: dark backgrounds, dense numerical displays, complex charts, and technical terminology. While these interfaces serve experienced traders well, they create barriers for users who prefer simpler data consumption or find numerical complexity overwhelming.
+---
 
-## Solution Approach
+## Current State and Limitations
 
-OverWatch addresses this challenge through:
+### What Works
+- Live data retrieval from all configured CMC endpoints
+- Reliable display of crypto and RWA market data
+- AI explanations with automatic provider fallback
+- Smooth UI transitions and responsive design
+- Public deployment with live API integration
 
-1. **Clean Visual Design**: Light, approachable interface with controlled color usage and clear information hierarchy
-2. **Focused Scope**: Single-page experience that presents essential information without overwhelming users
-3. **Live Data Integration**: Real-time market data from CoinMarketCap API
-4. **Plain Language Explanations**: Market data presented in accessible language when AI functionality is available, with fallback to rule-based responses when AI services are unavailable
-5. **Comprehensive Coverage**: Both cryptocurrency and Real World Asset data from CMC endpoints
+### Known Limitations
+- RWA logo coverage is inconsistent because CoinMarketCap does not provide logos for all RWA assets. The application uses colored placeholders with initials when logos are unavailable.
+- RWA 24-hour change data is not available in the current CMC endpoint, so RWA assets display live pricing but not percentage changes.
+- AI explanations fall back to rule-based responses when AI providers are unavailable or return errors. This is intentional to ensure the application remains functional during service outages.
+- The AI dataset currently includes the top 100 crypto assets and 20 RWA assets. Questions about assets outside this set may not be recognized.
+
+### RWA Logo Handling
+CoinMarketCap API documentation confirms that many RWA assets legitimately return null for logo fields. The application gracefully handles this by using colored placeholders with asset initials instead of failing or displaying broken images.
+
+---
 
 ## Development Approach
 
 The project was developed with emphasis on:
+
 - Clean, maintainable code structure
 - Effective API integration patterns
-- User experience prioritization
-- Production-ready deployment
-- Comprehensive error handling and fallback mechanisms
+- User experience prioritization over feature density
+- Production-ready deployment with comprehensive error handling
+- Honest data presentation without exaggerated capabilities
+- Comprehensive fallback mechanisms for service unavailability
 
-## Deployment and Architecture
+---
 
-- **Frontend**: React application deployed via Vercel
-- **Backend**: Vercel serverless functions for API proxying
-- **Environment Variables**: CMC API key configured for both production and preview environments
-- **Git Workflow**: Feature branch development with preview deployments
-- **Public Repository**: Clean commit history without sensitive credentials
+## Deployment
 
-## Current Capabilities
+- Production: https://overwatch-teal.vercel.app
+- Repository: https://github.com/Valorian0108/Over-Watch
+- Branch: main (stable), feature branches for experimental work
 
-### Market Data
-- Real-time global market metrics (market cap, volume, BTC dominance)
-- Live cryptocurrency listings with price and performance data
-- Real World Asset live pricing data with market cap and volume
-- Asset search functionality across both crypto and RWA datasets
-- Individual asset detail views with comprehensive information
-
-### User Interface
-- Responsive design for multiple screen sizes
-- Asset filtering by type (All, Crypto, RWA)
-- Clear visual hierarchy and information density
-- Accessible color scheme and typography
-- Smooth data refresh intervals
-- Auto-refresh functionality (60-second intervals)
-
-### API Integration
-- Robust error handling for API failures
-- Fallback mechanisms for service unavailability
-- Rate limit awareness and conservative refresh intervals
-- Comprehensive logging for debugging and monitoring
-
-## Known Limitations
-
-### RWA Data Coverage
-- RWA assets with live pricing data available through CMC endpoints
-- RWA logo coverage is inconsistent due to CMC API limitations
-- RWA 24h change data not available in current CMC endpoint
-
-### AI Integration
-- AI explanations default to rule-based responses when AI services are unavailable
-- AI service integration planned for future enhancement
-- Current fallback responses are grounded in real market data and provide functional value
-
-## Future Enhancement Opportunities
-
-### Enhanced RWA Integration
-- Investigation of alternative RWA data sources for improved coverage
-- Enhanced logo and metadata acquisition for RWA assets
-- Potential integration of stock market data if CMC expands coverage
-
-### AI Service Integration
-- Implementation of reliable AI service for enhanced plain-language explanations
-- Exploration of multiple AI providers for redundancy and cost optimization
-- Fine-tuning of AI prompts for specific market explanation use cases
-
-### Advanced Features
-- Historical data visualization
-- Comparative asset analysis
-- Custom watchlist functionality
-- Enhanced filtering and sorting options
+---
 
 ## CoinMarketCap API Usage
 
-The application demonstrates comprehensive use of CoinMarketCap API capabilities:
-- Global market metrics endpoint for overall market health
+OverWatch demonstrates practical use of multiple CoinMarketCap API endpoints:
+
+- Global market metrics for overall market health assessment
 - Cryptocurrency listings for individual asset data
 - RWA live pricing endpoints for real-world asset coverage
 - Info endpoints for detailed asset information and logo acquisition
 - Search functionality across multiple asset types
 
-## Development Philosophy
+All API calls include error handling and fallback mechanisms to ensure the application remains functional during service interruptions.
 
-The project prioritizes:
-- User experience over feature quantity
-- Clean, maintainable code over quick solutions
-- Honest data presentation over exaggerated capabilities
-- Production readiness over experimental features
-- Comprehensive error handling over assumed success
-
-## Conclusion
-
-OverWatch represents a focused approach to market data presentation that prioritizes accessibility and clarity. The application successfully integrates multiple CoinMarketCap API endpoints into a cohesive user experience while maintaining clean architecture and production-ready deployment standards.
+---
 
 Built for the CoinMarketCap API Hackathon.
